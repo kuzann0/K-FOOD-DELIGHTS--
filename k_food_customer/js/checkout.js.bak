@@ -1,0 +1,582 @@
+// Global variables
+let cart = [];
+let subtotal = 0;
+const DELIVERY_FEE = 50;
+const SENIOR_DISCOUNT = 0.2;
+const PWD_DISCOUNT = 0.15;
+let activePromoCode = null;
+
+// Function to display order items
+function displayOrderItems() {
+  const orderItemsContainer = document.getElementById("orderItems");
+  orderItemsContainer.innerHTML = "";
+
+  if (!cart || cart.length === 0) {
+    orderItemsContainer.innerHTML =
+      '<div class="empty-cart">Your cart is empty</div>';
+    return;
+  }
+
+  cart.forEach((item) => {
+    const itemElement = document.createElement("div");
+    itemElement.className = "order-item";
+    itemElement.innerHTML = `
+            <img src="${item.image}" alt="${item.name}">
+            <div class="order-item-details">
+                <div>${item.name}</div>
+                <div>Qty: ${item.quantity}</div>
+            </div>
+            <div class="order-item-price">₱${(
+              item.price * item.quantity
+            ).toFixed(2)}</div>
+        `;
+    orderItemsContainer.appendChild(itemElement);
+  });
+
+  // Check for Buy 3 Get 1 promo eligibility
+  checkBuy3Get1Eligibility();
+}
+
+// Load cart items and initialize functionality when page loads
+document.addEventListener("DOMContentLoaded", function () {
+  // Load cart from localStorage
+  try {
+    const savedCart = localStorage.getItem("cart");
+    if (!savedCart) {
+      throw new Error("Cart is empty");
+    }
+
+    cart = JSON.parse(savedCart);
+    if (!Array.isArray(cart) || cart.length === 0) {
+      throw new Error("Cart is empty");
+    }
+
+    // Validate cart item structure
+    cart = cart.map((item) => ({
+      name: item.name || "",
+      price: parseFloat(item.price) || 0,
+      quantity: parseInt(item.quantity) || 0,
+      image: item.image || "",
+    }));
+
+    // Validate if cart has valid items
+    if (
+      cart.some((item) => !item.name || item.price <= 0 || item.quantity <= 0)
+    ) {
+      throw new Error("Invalid cart items");
+    }
+  } catch (error) {
+    console.error("Cart validation error:", error);
+    alert("Your cart is empty or invalid!");
+    window.location.href = "menu.php";
+    return;
+  }
+
+  // Display items and initialize components
+  displayOrderItems();
+  attachEventListeners();
+  calculateSubtotal();
+  updateTotals();
+});
+
+// Attach event listeners to form elements
+function attachEventListeners() {
+  // Senior Citizen Checkbox
+  document
+    .getElementById("seniorDiscount")
+    .addEventListener("change", function () {
+      const seniorIdInput = document.getElementById("seniorIdInput");
+      seniorIdInput.style.display = this.checked ? "block" : "none";
+      if (!this.checked) {
+        document.getElementById("seniorId").value = "";
+      }
+      updateDiscounts();
+    });
+
+  // PWD Checkbox
+  document
+    .getElementById("pwdDiscount")
+    .addEventListener("change", function () {
+      const pwdIdInput = document.getElementById("pwdIdInput");
+      pwdIdInput.style.display = this.checked ? "block" : "none";
+      if (!this.checked) {
+        document.getElementById("pwdId").value = "";
+      }
+      updateDiscounts();
+    });
+
+  // Payment Method Selection
+  document.querySelectorAll(".payment-method").forEach((method) => {
+    method.addEventListener("click", function () {
+      document
+        .querySelectorAll(".payment-method")
+        .forEach((m) => m.classList.remove("selected"));
+      this.classList.add("selected");
+      const gcashDetails = document.getElementById("gcash-details");
+      if (this.dataset.method === "gcash") {
+        gcashDetails.classList.add("active");
+        document.getElementById("gcashReference").required = true;
+      } else {
+        gcashDetails.classList.remove("active");
+        document.getElementById("gcashReference").required = false;
+      }
+    });
+  });
+
+  // Auto-fill user information if available
+  if (typeof userData !== "undefined" && userData) {
+    document.getElementById("fullName").value =
+      userData.firstName + " " + userData.lastName;
+    document.getElementById("email").value = userData.email;
+    document.getElementById("phone").value = userData.phone || "";
+    document.getElementById("address").value = userData.address || "";
+  }
+}
+
+// Calculate subtotal from cart items
+function calculateSubtotal() {
+  subtotal = cart.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+  document.getElementById("subtotal").textContent = `₱${subtotal.toFixed(2)}`;
+  return subtotal;
+}
+
+// Apply promo code
+function applyPromoCode() {
+  const promoInput = document.getElementById("promoCode");
+  const promoCode = promoInput.value.trim().toUpperCase();
+  const promoApplied = document.querySelector(".promo-applied");
+
+  // Reset previous promo
+  if (activePromoCode) {
+    promoApplied.style.display = "none";
+    activePromoCode = null;
+  }
+
+  // Check for valid promo code
+  if (promoCode === "WELCOME10") {
+    activePromoCode = {
+      code: promoCode,
+      discount: 0.1,
+      type: "percentage",
+    };
+    promoApplied.style.display = "block";
+    promoInput.readOnly = true;
+  } else if (promoCode === "NEWUSER") {
+    activePromoCode = {
+      code: promoCode,
+      discount: 0.15,
+      type: "percentage",
+    };
+    promoApplied.style.display = "block";
+    promoInput.readOnly = true;
+  } else {
+    alert("Invalid promo code");
+    promoInput.value = "";
+  }
+
+  updateTotals();
+}
+
+// Update discounts when checkboxes change
+function updateDiscounts() {
+  const seniorChecked = document.getElementById("seniorDiscount").checked;
+  const pwdChecked = document.getElementById("pwdDiscount").checked;
+  const seniorId = document.getElementById("seniorId").value;
+  const pwdId = document.getElementById("pwdId").value;
+
+  // Validate IDs if checked
+  if (seniorChecked && !seniorId) {
+    alert("Please enter Senior Citizen ID");
+    document.getElementById("seniorDiscount").checked = false;
+    return;
+  }
+  if (pwdChecked && !pwdId) {
+    alert("Please enter PWD ID");
+    document.getElementById("pwdDiscount").checked = false;
+    return;
+  }
+
+  // Only one discount can be applied
+  if (seniorChecked && pwdChecked) {
+    alert("Only one discount can be applied: Senior Citizen or PWD");
+    if (event && event.target.id === "seniorDiscount") {
+      document.getElementById("pwdDiscount").checked = false;
+      document.getElementById("pwdId").value = "";
+      document.getElementById("pwdIdInput").style.display = "none";
+    } else {
+      document.getElementById("seniorDiscount").checked = false;
+      document.getElementById("seniorId").value = "";
+      document.getElementById("seniorIdInput").style.display = "none";
+    }
+  }
+
+  updateTotals();
+}
+
+// Check eligibility for Buy 3 Get 1 promo
+function checkBuy3Get1Eligibility() {
+  // Group items by name to check for duplicates
+  const itemGroups = cart.reduce((groups, item) => {
+    if (!groups[item.name]) {
+      groups[item.name] = {
+        quantity: 0,
+        price: item.price,
+      };
+    }
+    groups[item.name].quantity += item.quantity;
+    return groups;
+  }, {});
+
+  // Check all items for Buy 3 Get 1 eligibility
+  let eligible = false;
+  let itemsNeeded = 3;
+  let maxDiscountItem = { price: 0 };
+
+  Object.entries(itemGroups).forEach(([name, data]) => {
+    const { quantity, price } = data;
+    if (quantity >= 3) {
+      eligible = true;
+      itemsNeeded = 0;
+      // Track item with highest price for discount
+      if (price > maxDiscountItem.price) {
+        maxDiscountItem = { name, price };
+      }
+    } else if (quantity > 0 && itemsNeeded > 0) {
+      itemsNeeded = Math.max(0, 3 - quantity);
+    }
+  });
+
+  const buy3get1Alert = document.querySelector(".buy3get1-alert");
+  const itemsNeededSpan = document.querySelector(".items-needed");
+  const progressBar = document.querySelector(".promo-progress-bar");
+
+  if (eligible) {
+    buy3get1Alert.classList.add("active");
+    itemsNeededSpan.textContent = "0";
+    progressBar.style.width = "100%";
+    // Buy 3 Get 1 discount will be applied in updateTotals()
+  } else if (itemsNeeded < 3) {
+    buy3get1Alert.classList.add("active");
+    itemsNeededSpan.textContent = itemsNeeded;
+    progressBar.style.width = `${((3 - itemsNeeded) / 3) * 100}%`;
+  } else {
+    buy3get1Alert.classList.remove("active");
+  }
+}
+
+// Update all totals and discounts
+function updateTotals() {
+  const subtotalAmount = calculateSubtotal();
+  let totalDiscount = 0;
+  let promoDiscount = 0;
+  let seniorPwdDiscount = 0;
+
+  // Apply promo code discount
+  if (activePromoCode) {
+    if (activePromoCode.type === "percentage") {
+      promoDiscount = subtotalAmount * activePromoCode.discount;
+    } else {
+      promoDiscount = activePromoCode.discount;
+    }
+    document.querySelector(".total-row.discount-row").style.display = "flex";
+    document.getElementById(
+      "promoDiscount"
+    ).textContent = `-₱${promoDiscount.toFixed(2)}`;
+  }
+
+  // Apply Senior/PWD discount
+  const seniorChecked = document.getElementById("seniorDiscount").checked;
+  const pwdChecked = document.getElementById("pwdDiscount").checked;
+
+  if (seniorChecked || pwdChecked) {
+    const discountRate = seniorChecked ? SENIOR_DISCOUNT : PWD_DISCOUNT;
+    seniorPwdDiscount = subtotalAmount * discountRate;
+    document.querySelectorAll(".total-row.discount-row")[1].style.display =
+      "flex";
+    document.getElementById(
+      "seniorPwdDiscount"
+    ).textContent = `-₱${seniorPwdDiscount.toFixed(2)}`;
+  }
+
+  // Apply Buy 3 Get 1 discount if eligible
+  const buy3get1Eligible =
+    document.querySelector(".buy3get1-alert.active") &&
+    document.querySelector(".items-needed").textContent === "0";
+
+  // Calculate total savings
+  totalDiscount = promoDiscount + seniorPwdDiscount;
+  if (totalDiscount > 0) {
+    document.querySelector(".savings-row").style.display = "flex";
+    document.getElementById(
+      "totalSavings"
+    ).textContent = `₱${totalDiscount.toFixed(2)}`;
+  } else {
+    document.querySelector(".savings-row").style.display = "none";
+  }
+
+  // Calculate final total
+  const total = subtotalAmount + DELIVERY_FEE - totalDiscount;
+  document.getElementById("totalAmount").textContent = `₱${total.toFixed(2)}`;
+}
+
+// Modal and navigation functions
+function showConfirmationModal() {
+  document.getElementById("confirmationModal").style.display = "block";
+}
+
+function hideConfirmationModal() {
+  document.getElementById("confirmationModal").style.display = "none";
+}
+
+function returnToHome() {
+  localStorage.removeItem("cart");
+  window.location.href = "index.php";
+}
+
+// Close modal when clicking outside
+window.onclick = function (event) {
+  const modal = document.getElementById("confirmationModal");
+  if (event.target === modal) {
+    hideConfirmationModal();
+  }
+};
+
+// Notification handler
+function showNotification(message, type = "info") {
+  const notification = document.createElement("div");
+  notification.className = `notification ${type}`;
+  notification.innerHTML = `
+    <i class="fas fa-${
+      type === "success"
+        ? "check-circle"
+        : type === "error"
+        ? "exclamation-circle"
+        : "info-circle"
+    }"></i>
+    ${message}
+  `;
+  document.body.appendChild(notification);
+
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    notification.style.animation = "slideOut 0.3s ease forwards";
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+// Place Order function
+async function placeOrder() {
+  // Form validation
+  const form = document.getElementById("checkoutForm");
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  // Validate cart
+  if (!cart || !Array.isArray(cart) || cart.length === 0) {
+    showNotification(
+      "Your cart is empty. Please add items before checking out.",
+      "error"
+    );
+    window.location.href = "menu.php";
+    return;
+  }
+
+  // Validate address
+  const address = document.getElementById("address").value.trim();
+  const latitude = document.getElementById("latitude")?.value;
+  const longitude = document.getElementById("longitude")?.value;
+
+  if (
+    !address ||
+    (typeof validateLocation === "function" && !validateLocation())
+  ) {
+    showNotification("Please confirm your delivery location", "error");
+    return;
+  }
+
+  const selectedPayment = document.querySelector(".payment-method.selected");
+  if (!selectedPayment) {
+    alert("Please select a payment method");
+    return;
+  }
+
+  const paymentMethod = selectedPayment.dataset.method;
+  if (paymentMethod === "gcash") {
+    const reference = document.getElementById("gcashReference").value;
+    if (!reference) {
+      alert("Please enter GCash reference number");
+      return;
+    }
+  }
+
+  // Show loading state
+  const orderButton = document.querySelector(".place-order-btn");
+  const originalText = orderButton.textContent;
+  orderButton.textContent = "Processing...";
+  orderButton.disabled = true;
+
+  // Calculate final amounts
+  const subtotalAmount = parseFloat(
+    document.getElementById("subtotal").textContent.replace("₱", "")
+  );
+  const totalAmount = parseFloat(
+    document.getElementById("totalAmount").textContent.replace("₱", "")
+  );
+  const totalDiscount = parseFloat(
+    document.getElementById("totalSavings")?.textContent.replace("₱", "") || "0"
+  );
+
+  // Validate cart data
+  if (!Array.isArray(cart) || cart.length === 0) {
+    alert("Your cart is empty. Please add items before checking out.");
+    window.location.href = "menu.php";
+    return;
+  }
+
+  try {
+    // Validate required form fields
+    const requiredFields = {
+      fullName: "Full Name",
+      email: "Email",
+      phone: "Phone",
+      address: "Address",
+    };
+
+    for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
+      const value = document.getElementById(fieldId).value.trim();
+      if (!value) {
+        throw new Error(`${fieldName} is required`);
+      }
+    }
+
+    // Prepare and validate order data
+    const orderData = {
+      customerInfo: {
+        name: document.getElementById("fullName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        address: document.getElementById("address").value.trim(),
+        deliveryInstructions: document
+          .getElementById("deliveryInstructions")
+          .value.trim(),
+      },
+      payment: {
+        method: paymentMethod,
+        gcashReference:
+          paymentMethod === "gcash"
+            ? document.getElementById("gcashReference").value.trim()
+            : "",
+      },
+      discounts: {
+        promoCode: activePromoCode?.code || null,
+        seniorDiscount: document.getElementById("seniorDiscount").checked,
+        seniorId: document.getElementById("seniorId").value.trim(),
+        pwdDiscount: document.getElementById("pwdDiscount").checked,
+        pwdId: document.getElementById("pwdId").value.trim(),
+      },
+      items: cart.map((item) => ({
+        name: item.name,
+        price: parseFloat(item.price),
+        quantity: parseInt(item.quantity),
+        image: item.image,
+      })),
+      amounts: {
+        subtotal: subtotalAmount,
+        deliveryFee: DELIVERY_FEE,
+        totalDiscount: totalDiscount,
+        total: totalAmount,
+      },
+    };
+
+    // Validate the order data structure
+    if (
+      !orderData.customerInfo ||
+      !orderData.payment ||
+      !orderData.items ||
+      !orderData.amounts
+    ) {
+      throw new Error("Invalid order data structure");
+    }
+
+    // Validate items array
+    if (!Array.isArray(orderData.items) || orderData.items.length === 0) {
+      throw new Error("Cart is empty");
+    }
+
+    // Validate amounts
+    if (
+      typeof orderData.amounts.total !== "number" ||
+      orderData.amounts.total <= 0
+    ) {
+      throw new Error("Invalid total amount");
+    }
+
+    // Debug log the validated order data
+    console.log(
+      "Sending validated order data:",
+      JSON.stringify(orderData, null, 2)
+    );
+    return orderData;
+  } catch (error) {
+    console.error("Order data validation error:", error);
+    alert(error.message);
+    return null;
+  }
+
+  // Debug log
+  console.log("Sending order data:", orderData);
+
+  // Get validated order data
+  const validatedOrderData = await validateAndPrepareOrderData();
+  if (!validatedOrderData) {
+    orderButton.textContent = originalText;
+    orderButton.disabled = false;
+    return;
+  }
+
+  try {
+    const response = await fetch("process_order.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(validatedOrderData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
+    const responseText = await response.text();
+    console.log("Raw server response:", responseText);
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse server response:", e);
+      throw new Error("Invalid server response format");
+    }
+
+    if (result.success) {
+      // Only clear cart after successful order confirmation
+      localStorage.removeItem("cart");
+      window.location.href =
+        "order_confirmation.php?order_id=" + result.orderId;
+    } else {
+      throw new Error(result.message || "Failed to place order");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Error placing order: " + error.message);
+  } finally {
+    // Reset button state
+    orderButton.textContent = originalText;
+    orderButton.disabled = false;
+  }
+}

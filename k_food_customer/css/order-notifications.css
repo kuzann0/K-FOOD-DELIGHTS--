@@ -1,0 +1,66 @@
+.order-item {
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.order-item.new {
+  background: #fff3e0;
+  animation: highlight 5s ease-out;
+}
+
+@keyframes highlight {
+  0% {
+    background: #ffe0b2;
+    transform: translateX(-5px);
+  }
+  100% {
+    background: #fff;
+    transform: translateX(0);
+  }
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.order-number {
+  font-weight: bold;
+  color: #333;
+}
+
+.order-time {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.order-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-amount {
+  font-size: 1.1em;
+  color: #2196f3;
+}
+
+.view-btn {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 5px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.view-btn:hover {
+  background: #1976d2;
+}

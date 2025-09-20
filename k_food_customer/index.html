@@ -1,0 +1,651 @@
+<!-- index.html -->
+<!DOCTY    <link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="css/sigin.css" />
+<link rel="stylesheet" href="css/slider.css" /> html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="K-Food Delight - Experience authentic Korean fusion cuisine"
+    />
+    <meta
+      name="keywords"
+      content="Korean food, fusion cuisine, restaurant, food delivery"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/sigin.css" />
+    <link rel="shortcut icon" href="../logo-tab-icon.ico" type="image/x-icon" />
+    <title>K-Food Delight</title>
+  </head>
+  <body>
+    <div id="pre-loader"></div>
+
+    <div class="navbar">
+      <div class="navdiv">
+        <div class="logo">
+          <a href="#"> K-Food Delights</a>
+        </div>
+        <nav class="nav-links">
+          <ul>
+            <li><a href="#aboutus-section">About Us</a></li>
+            <li><a href="#product-section">Product</a></li>
+            <!-- <li><a href="#faqs-section">FAQs</a></li> -->
+            <li><a href="#contact-section">Contact</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+
+    <div class="hero-container">
+      <div class="wrapper">
+        <img
+          src="../resources/images/sushi.png"
+          alt="sushi"
+          class="img-sushi"
+        />
+        <img src="../resources/images/logo.png" alt="logo" class="img-logo" />
+        <img
+          src="../resources/images/lasagna.png"
+          alt="lasagna"
+          class="img-lasagna"
+        />
+        <div class="heading-k"><h1>K-Food</h1></div>
+        <div class="header-back-text">
+          <h1>
+            K-FOOD DELIGHT K-FOOD DELIGHT K-FOOD DELIGHT K-FOOD DELIGHT K-FOOD
+            DELIGHT K-FOOD DELIGHT
+          </h1>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <section class="aboutus-section" id="aboutus-section">
+        <div class="panel">
+          <div class="header-p">
+            <h1><i class="fas fa-store"></i> About Us</h1>
+          </div>
+        </div>
+        <div class="section-content">
+          <p>
+            K-Food Delight, in Philam, Quezon City, offers delicious homemade
+            Filipino-fusion cuisine. Owners Michelle J. Javillo and Krystal E.
+            Selisana create unique dishes, from lasagna and sushi to their
+            signature spicy chicken pastil. We cater to students, families,
+            professionals, and anyone craving exciting flavors. We're passionate
+            about providing high-quality food and memorable dining experiences,
+            and we strive to be Quezon City's leading provider of innovative
+            Filipino-fusion dishes.
+          </p>
+        </div>
+      </section>
+
+      <!-- Replace the existing product-section with this code -->
+      <section class="product-section" id="product-section">
+        <div class="panel">
+          <div class="header-p">
+            <h1><i class="fas fa-bowl-food"></i> Our Menu</h1>
+          </div>
+        </div>
+        <div class="section-content">
+          <div class="image-slider">
+            <div class="slider-container">
+              <div class="slide fade">
+                <div class="slide-content">
+                  <img src="../resources/images/pastil.jpg" alt="Pastil" />
+                  <div class="product-info">
+                    <h3>Pastil</h3>
+                    <p>Comes with different tastes!</p>
+                    <span class="price">₱170.00</span>
+                  </div>
+                </div>
+              </div>
+              <div class="slide fade">
+                <div class="slide-content">
+                  <img src="../resources/images/sushi.jpg" alt="Sushi" />
+                  <div class="product-info">
+                    <h3>Sushi</h3>
+                    <p>Fresh and flavorful sushi!</p>
+                    <span class="price">₱250.00</span>
+                  </div>
+                </div>
+              </div>
+              <div class="slide fade">
+                <div class="slide-content">
+                  <img src="../resources/images/lasagna.jpg" alt="Lasagna" />
+                  <div class="product-info">
+                    <h3>Lasagna</h3>
+                    <p>Filipino-style lasagna!</p>
+                    <span class="price">₱300.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button class="slider-btn prev-button">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="slider-btn next-button">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <div class="dots-container"></div>
+          </div>
+          <div class="order-container">
+            <a
+              href="#"
+              class="order-btn"
+              id="mainOrderBtn"
+              onclick="openOrderModal(getCurrentProduct(), getCurrentPrice())"
+              >Order Now</a
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="faqs-section" id="faqs-section">
+        <div class="panel">
+          <div class="header-p">
+            <h1><i class="fas fa-question-circle"></i> FAQs</h1>
+          </div>
+        </div>
+        <div class="section-content">
+          <div class="faq-item">
+            <h3>What are your hours?</h3>
+            <p>We are open from 11 AM to 9 PM, Monday through Saturday.</p>
+          </div>
+          <div class="faq-item">
+            <h3>Do you offer catering?</h3>
+            <p>Yes, we do! Please contact us for more information.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact-section" id="contact-section">
+        <div class="panel">
+          <div class="header-p">
+            <h1><i class="fas fa-envelope"></i> Contact</h1>
+          </div>
+        </div>
+        <div class="section-content">
+          <div class="contact-info">
+            <p>
+              <i class="fas fa-map-marker-alt"></i> 123 Main Street, Anytown, CA
+              91234
+            </p>
+            <p><i class="fas fa-phone"></i> (555) 555-5555</p>
+            <p><i class="fas fa-envelope"></i> info@kfooddelights.com</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <button id="scroll-to-top" title="Go to top">
+      <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <footer class="footer-section">
+      <div class="footer-content">
+        <div class="footer-bottom">
+          <p>&copy; 2025 K-Food Delights. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+      <div class="modal-content login-box">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Sign In</h2>
+
+        <form action="login.php" method="POST">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Username" required />
+
+          <label>Password</label>
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+          />
+
+          <button type="submit" class="login-btn">Sign In</button>
+
+          <div class="form-options">
+            <a href="#" class="no-account" onclick="switchToSignup()"
+              >Don't have an account?</a
+            >
+            <a href="#" class="forgot">Forgot Password</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div id="signupModal" class="modal">
+      <div class="modal-content-signup">
+        <span class="close" onclick="closeSignupModal()">&times;</span>
+        <h2>Sign Up</h2>
+
+        <form id="signupForm" method="POST">
+          <input
+            type="text"
+            name="firstname"
+            placeholder="First Name"
+            required
+          />
+          <input type="text" name="lastname" placeholder="Last Name" required />
+          <input type="email" name="email" placeholder="Email" required />
+          <input type="text" name="username" placeholder="Username" required />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+          />
+
+          <button type="submit" class="login-btn" name="submit">
+            Register
+          </button>
+
+          <div class="form-options">
+            <a href="#" class="no-account" onclick="switchToLogin()"
+              >Already have an account?</a
+            >
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault(); // prevent form from reloading the page
+
+          const formData = new FormData(this);
+
+          fetch("register.php", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.text())
+            .then((data) => {
+              if (data.includes("success")) {
+                alert("✅ Registered successfully!");
+                closeSignupModal(); // hide signup modal
+                openLoginModal(); // show login modal
+                this.reset(); // optional: clear the form fields
+              } else {
+                alert("❌ Registration failed:\n" + data);
+                console.error(data); // log full error
+              }
+            })
+            .catch((error) => {
+              alert("❌ An error occurred:\n" + error);
+              console.error("Error:", error);
+            });
+        });
+    </script>
+
+    <script src="js/signin.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+      // Functions to get current product details
+      function getCurrentProduct() {
+        const activeSlide = document.querySelector(".slide.active");
+        return activeSlide.querySelector("h3").textContent;
+      }
+
+      function getCurrentPrice() {
+        const activeSlide = document.querySelector(".slide.active");
+        const priceText = activeSlide.querySelector(".price").textContent;
+        return parseFloat(priceText.replace("₱", ""));
+      }
+
+      // Update main order button text based on current product
+      function updateOrderButton() {
+        const product = getCurrentProduct();
+        const price = getCurrentPrice();
+        const mainOrderBtn = document.getElementById("mainOrderBtn");
+        mainOrderBtn.textContent = `Order ${product} - ₱${price}`;
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const slides = document.querySelectorAll(".slide");
+        if (slides.length > 0) {
+          slides[0].classList.add("active");
+          updateOrderButton();
+        }
+
+        // Watch for slide changes
+        const observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (mutation) {
+            if (mutation.target.classList.contains("active")) {
+              updateOrderButton();
+            }
+          });
+        });
+
+        slides.forEach(function (slide) {
+          observer.observe(slide, { attributes: true });
+        });
+      });
+    </script>
+
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 style="margin-bottom: 20px">Place Your Order</h2>
+        <form id="orderForm">
+          <div class="form-group">
+            <label for="customerName">Full Name:</label>
+            <input type="text" id="customerName" name="customerName" required />
+          </div>
+          <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone:</label>
+            <input type="tel" id="phone" name="phone" required />
+          </div>
+          <div class="form-group">
+            <label for="address">Delivery Address:</label>
+            <textarea id="address" name="address" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="product">Product:</label>
+            <input type="text" id="product" name="product" readonly />
+          </div>
+          <div class="form-group">
+            <label for="quantity">Quantity:</label>
+            <input
+              type="number"
+              id="quantity"
+              name="quantity"
+              min="1"
+              value="1"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="deliveryDate">Preferred Delivery Date:</label>
+            <input type="date" id="deliveryDate" name="deliveryDate" required />
+          </div>
+          <div class="form-group">
+            <label for="totalPrice">Total Price:</label>
+            <input type="text" id="totalPrice" name="totalPrice" readonly />
+          </div>
+          <button type="submit" class="submit-btn">Place Order</button>
+        </form>
+      </div>
+    </div>
+
+    <style>
+      /* Slider and Product Styles */
+      .slide.fade {
+        position: relative;
+        display: none;
+      }
+
+      .slide img {
+        width: 100%;
+        height: auto;
+        max-height: 300px;
+        object-fit: cover;
+        border-radius: 8px 8px 0 0;
+      }
+
+      .product-info {
+        position: relative;
+        z-index: 2;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        margin-top: -20px;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .product-info h3 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 1.5rem;
+      }
+
+      .product-info p {
+        color: #666;
+        margin-bottom: 10px;
+      }
+
+      .product-info .price {
+        color: #ff6666;
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        display: block;
+      }
+
+      .order-btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #ff6666, #ffaf00);
+        color: white;
+        padding: 10px 25px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        border: none;
+        margin-top: 10px;
+      }
+
+      .order-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .slider-container {
+        position: relative;
+        max-width: 1200px;
+        margin: 0 auto;
+        overflow: visible;
+      }
+      .slide-content {
+        position: relative;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin: 10px;
+      }
+
+      /* Make sure navigation buttons are above slides */
+      .slider-btn {
+        z-index: 3;
+      }
+
+      /* Modal Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content {
+        background-color: #fff;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 500px;
+        position: relative;
+      }
+
+      .close {
+        position: absolute;
+        right: 20px;
+        top: 10px;
+        font-size: 28px;
+        cursor: pointer;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .submit-btn {
+        background-color: #4caf50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+      }
+
+      .submit-btn:hover {
+        background-color: #45a049;
+      }
+    </style>
+
+    <script>
+      // Get modal elements
+      const modal = document.getElementById("orderModal");
+      const closeBtn = document.getElementsByClassName("close")[0];
+      const orderForm = document.getElementById("orderForm");
+
+      // Set minimum date for delivery date picker (tomorrow)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById("deliveryDate").min = tomorrow
+        .toISOString()
+        .split("T")[0];
+
+      // Function to open modal
+      function openOrderModal(productName, price) {
+        modal.style.display = "block";
+        document.getElementById("product").value = productName;
+        currentProductPrice = price;
+        updateTotal(price);
+      }
+
+      // Close modal when clicking (x)
+      closeBtn.onclick = function () {
+        modal.style.display = "none";
+      };
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      };
+
+      // Store the current product price
+      let currentProductPrice = 0;
+
+      // Update total price when quantity changes
+      document
+        .getElementById("quantity")
+        .addEventListener("change", function () {
+          updateTotal(currentProductPrice);
+        });
+
+      function updateTotal(unitPrice) {
+        const quantity = document.getElementById("quantity").value;
+        const total = (unitPrice * quantity).toFixed(2);
+        document.getElementById("totalPrice").value = "₱" + total;
+      }
+
+      // Handle form submission
+      orderForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(orderForm);
+        const orderData = {
+          customerName: formData.get("customerName"),
+          email: formData.get("email"),
+          phone: formData.get("phone"),
+          address: formData.get("address"),
+          product: formData.get("product"),
+          quantity: parseInt(formData.get("quantity")),
+          totalPrice: formData.get("totalPrice"),
+          deliveryDate: formData.get("deliveryDate"),
+          order_date: new Date().toISOString().slice(0, 19).replace("T", " "),
+        };
+
+        // Send order to server
+        fetch("process_order.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(orderData),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              alert("Order placed successfully!");
+              modal.style.display = "none";
+              orderForm.reset();
+            } else {
+              alert(data.message || "Error placing order. Please try again.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error placing order. Please try again.");
+          });
+      });
+    </script>
+    <script>
+      // Show first slide by default
+      document.addEventListener("DOMContentLoaded", function () {
+        const slides = document.querySelectorAll(".slide");
+        if (slides.length > 0) {
+          slides[0].classList.add("active");
+        }
+      });
+    </script>
+  </body>
+</html>

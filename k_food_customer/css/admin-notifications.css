@@ -1,0 +1,153 @@
+/* Admin Notification Styles */
+.notifications-container {
+  position: fixed;
+  right: 20px;
+  top: 60px;
+  width: 400px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.notifications-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notifications-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+}
+
+.notifications-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.notification-item {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f8f9fa;
+}
+
+.notification-item.urgent {
+  border-left: 4px solid #dc3545;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 5px;
+}
+
+.notification-type {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.notification-time {
+  font-size: 0.85rem;
+  color: #adb5bd;
+}
+
+.notification-message {
+  color: #212529;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.notification-details {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 8px;
+  display: none;
+}
+
+.notification-item.expanded .notification-details {
+  display: block;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-danger {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.badge-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.notification-icon {
+  position: relative;
+  display: inline-block;
+}
+
+/* Animation for new notifications */
+@keyframes notification-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.notification-badge.new {
+  animation: notification-pulse 1s ease-in-out;
+}
+
+/* Empty state styling */
+.notifications-empty {
+  padding: 30px 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.notifications-empty i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+  .notifications-container {
+    width: calc(100% - 20px);
+    right: 10px;
+    left: 10px;
+  }
+}

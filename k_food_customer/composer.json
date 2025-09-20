@@ -1,0 +1,9 @@
+{
+  "require": {
+    "cboden/ratchet": "^0.4.4",
+    "react/socket": "^1.12",
+    "react/event-loop": "^1.4",
+    "pusher/pusher-php-server": "^7.0",
+    "textalk/websocket": "^1.5"
+  }
+}

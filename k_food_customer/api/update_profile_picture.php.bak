@@ -1,0 +1,212 @@
+<?php
+require_once '../config.php';
+require_once '../includes/auth.php';
+// Process and optimize the image
+    $image = null;
+    
+    // Get image info
+    list($origWidth, $origHeight, $type) = getimagesize($file['tmp_name']);
+    
+    // Calculate new dimensions while maintaining aspect ratio
+    $maxDim = 800;
+    $ratio = min($maxDim / $origWidth, $maxDim / $origHeight);
+    $newWidth = round($origWidth * $ratio);
+    $newHeight = round($origHeight * $ratio);
+    
+    // Create new image with correct orientation
+    $exif = @exif_read_data($file['tmp_name']);
+    $orientation = isset($exif['Orientation']) ? $exif['Orientation'] : 1;
+    
+    switch($detectedType) {
+        case 'image/jpeg':
+            $image = imagecreatefromjpeg($file['tmp_name']);
+            break;
+        case 'image/png':
+            $image = imagecreatefrompng($file['tmp_name']);
+            break;
+    }
+    
+    // Fix orientation based on EXIF data
+    if ($image && $orientation > 1) {
+        switch ($orientation) {
+            case 3: $image = imagerotate($image, 180, 0); break;
+            case 6: $image = imagerotate($image, -90, 0); break;
+            case 8: $image = imagerotate($image, 90, 0); break;
+        }
+    }
+    
+    // Create new image with correct size
+    $newImage = imagecreatetruecolor($newWidth, $newHeight);
+    
+    // Preserve transparency for PNG
+    if ($detectedType === 'image/png') {
+        imagealphablending($newImage, false);
+        imagesavealpha($newImage, true);
+        $transparent = imagecolorallocatealpha($newImage, 255, 255, 255, 127);
+        imagefilledrectangle($newImage, 0, 0, $newWidth, $newHeight, $transparent);
+    }ontent-Type: application/json');
+
+if (!isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Not logged in']);
+    exit();
+}
+
+// Verify CSRF token
+if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid request']);
+    exit();
+}
+
+try {
+    if (!isset($_FILES['profile_picture'])) {
+        throw new Exception('No file uploaded');
+    }
+
+    $file = $_FILES['profile_picture'];
+    
+    // More strict MIME type checking
+    $allowedTypes = ['image/jpeg', 'image/png'];
+    $maxFileSize = 5 * 1024 * 1024; // 5MB
+    
+    // Double check MIME type with fileinfo
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $detectedType = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    if (!in_array($detectedType, $allowedTypes)) {
+        throw new Exception('Invalid file type. Only JPG and PNG images are allowed.');
+    }
+
+    // Validate MIME type against what browser reported
+    if ($detectedType !== $file['type']) {
+        throw new Exception('File type mismatch detected.');
+    }
+    
+    // Validate file type
+    if (!in_array($file['type'], $allowedTypes)) {
+        throw new Exception('Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.');
+    }
+
+    // Validate file size
+    if ($file['size'] > $maxFileSize) {
+        throw new Exception('File size too large. Maximum size is 5MB.');
+    }
+
+    $uploadDir = '../uploads/profile/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    // Generate unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = uniqid('profile_') . '_' . time() . '.' . $extension;
+    $targetPath = $uploadDir . $filename;
+
+    // Get current user's info to clean up old image
+    $user = getCurrentUser($conn);
+    if ($user && !empty($user['profile_picture'])) {
+        $oldFile = '../uploads/profile/' . $user['profile_picture'];
+        if (file_exists($oldFile) && is_file($oldFile)) {
+            unlink($oldFile);
+        }
+    }
+
+    // Process and optimize the image
+    $image = null;
+    switch($detectedType) {
+        case 'image/jpeg':
+            $image = @imagecreatefromjpeg($file['tmp_name']);
+            break;
+        case 'image/png':
+            $image = @imagecreatefrompng($file['tmp_name']);
+            break;
+    }
+
+    // Verify image creation was successful
+    if (!$image) {
+        throw new Exception('Failed to process image. The file might be corrupted.');
+
+    if (!$image) {
+        throw new Exception('Failed to process image.');
+    }
+
+    // Resize if too large
+    $maxDimension = 500;
+    $width = imagesx($image);
+    $height = imagesy($image);
+
+    if ($width > $maxDimension || $height > $maxDimension) {
+        if ($width > $height) {
+            $newWidth = $maxDimension;
+            $newHeight = ($height / $width) * $maxDimension;
+        } else {
+            $newHeight = $maxDimension;
+            $newWidth = ($width / $height) * $maxDimension;
+        }
+
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // Preserve transparency for PNG images
+        if ($file['type'] === 'image/png') {
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+        }
+
+        imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        $image = $resized;
+    }
+
+    // Copy and resize the image with high quality
+    imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+    
+    // Apply subtle sharpening
+    $sharpen = array(
+        array(0.0, -1.0, 0.0),
+        array(-1.0, 5.0, -1.0),
+        array(0.0, -1.0, 0.0)
+    );
+    imageconvolution($newImage, $sharpen, 1, 0);
+    
+    // Save the optimized image with high quality
+    switch($detectedType) {
+        case 'image/jpeg':
+            imagejpeg($newImage, $targetPath, 90);
+            break;
+        case 'image/png':
+            imagepng($newImage, $targetPath, 8);
+            break;
+            break;
+    }
+
+    imagedestroy($image);
+
+    // Fetch old profile picture before updating
+    $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE user_id = ?");
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $oldPicture = $stmt->get_result()->fetch_assoc()['profile_picture'];
+
+    // Update database with new filename
+    $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE user_id = ?");
+    $stmt->bind_param("si", $filename, $_SESSION['user_id']);
+    if ($stmt->execute()) {
+        // Delete old profile picture if it exists and is not the default
+        if ($oldPicture && $oldPicture !== 'default.png' && file_exists($uploadDir . $oldPicture)) {
+            unlink($uploadDir . $oldPicture);
+        }
+        echo json_encode(['success' => true, 'filename' => $filename]);
+    } else {
+        // Remove the new file if DB update failed
+        if (file_exists($targetPath)) {
+            unlink($targetPath);
+        }
+        echo json_encode(['success' => false, 'message' => 'Error updating database']);
+    }
+
+} catch (Exception $e) {
+    error_log($e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'An error occurred']);
+}
+?>

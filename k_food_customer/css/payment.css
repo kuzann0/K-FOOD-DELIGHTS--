@@ -1,0 +1,95 @@
+.payment-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.payment-method:hover {
+  border-color: #ff6666;
+  transform: translateY(-1px);
+}
+
+.payment-method.selected {
+  border-color: #ff6666;
+  box-shadow: 0 2px 8px rgba(255, 102, 102, 0.1);
+}
+
+.payment-method img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.payment-method-text {
+  flex: 1;
+}
+
+.payment-method-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.payment-method-description {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.qr-section {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.qr-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code {
+  width: 200px;
+  height: 200px;
+  margin: 10px auto;
+}
+
+/* Discount section styles */
+.discount-section {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.discount-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.discount-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff6666;
+}
+
+.checkbox-text {
+  font-size: 0.95em;
+  color: #333;
+}

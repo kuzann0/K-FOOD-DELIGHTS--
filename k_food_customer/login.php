@@ -36,63 +36,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($username) || empty($password)) {
         $error = 'Please fill in all fields';
     } else {
+        // Prepare and execute SQL query to fetch user by username
+        // user_id is the primary key in the users table (see docs/database-schema.md)
         $stmt = $conn->prepare("SELECT user_id, password, role_id, account_status FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows === 1) {
-            $user = $result->fetch_assoc();
-            
-            // Check if account is active
-            if ($user['account_status'] !== 'active') {
-                $error = 'Account is not active. Please contact support.';
-            } else if (password_verify($password, $user['password'])) {
-                // Update last login timestamp and login attempt reset
-                $updateStmt = $conn->prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP, login_attempts = 0 WHERE user_id = ?");
-                $updateStmt->bind_param("i", $user['user_id']);
-                $updateStmt->execute();
-                $updateStmt->close();
-                
-                // Set session variables
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['role_id'] = $user['role_id'];
-                $_SESSION['last_activity'] = time();
-                
-                // Regenerate session ID for security
-                session_regenerate_id(true);
-                
-                // Store role in session for role-based access control
-                $_SESSION['role_id'] = $user['role_id'];
-                
-                // Redirect based on role
-                switch ($user['role_id']) {
-                    case 2: // Admin account
-                        $_SESSION['is_admin'] = true;
-                        header('Location: ../kfood_admin/index.php');
-                        break;
-                    case 3: // Crew account
-                        $_SESSION['is_crew'] = true;
-                        header('Location: ../kfood_crew/index.php');
-                        break;
-                    case 1: // Customer account
-                    default:
-                        $_SESSION['is_customer'] = true;
-                        // Check if there's a redirect URL stored in session
-                        if (isset($_SESSION['redirect_after_login'])) {
-                            $redirect = $_SESSION['redirect_after_login'];
-                            unset($_SESSION['redirect_after_login']);
-                            header('Location: ' . $redirect);
-                        } else {
-                            header('Location: index.php');
-                        }
-                }
-                exit();
-            } else {
-                $error = 'Invalid credentials';
-            }
+        if (!$stmt) {
+            // SQL prepare failed (e.g., column missing or DB error)
+            $error = 'A system error occurred. Please try again later.';
         } else {
-            $error = 'Invalid credentials';
+            $stmt->bind_param("s", $username);
+            if (!$stmt->execute()) {
+                // SQL execution failed
+                $error = 'A system error occurred. Please try again later.';
+            } else {
+                $result = $stmt->get_result();
+                if ($result && $result->num_rows === 1) {
+                    $user = $result->fetch_assoc();
+                    // Check if account is active
+                    if ($user['account_status'] !== 'active') {
+                        $error = 'Account is not active. Please contact support.';
+                    } else if (password_verify($password, $user['password'])) {
+                        // Update last login timestamp and login attempt reset
+                        $updateStmt = $conn->prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP, login_attempts = 0 WHERE user_id = ?");
+                        if ($updateStmt) {
+                            $updateStmt->bind_param("i", $user['user_id']);
+                            $updateStmt->execute();
+                            $updateStmt->close();
+                        }
+                        // Set session variables
+                        $_SESSION['user_id'] = $user['user_id'];
+                        $_SESSION['role_id'] = $user['role_id'];
+                        $_SESSION['last_activity'] = time();
+                        // Regenerate session ID for security
+                        session_regenerate_id(true);
+                        // Store role in session for role-based access control
+                        $_SESSION['role_id'] = $user['role_id'];
+                        // Redirect based on role_id
+                        switch ($user['role_id']) {
+                            case 1: // Superadmin
+                                $_SESSION['is_superadmin'] = true;
+                                header('Location: ../kfood_admin/dashboard.php');
+                                break;
+                            case 2: // Admin
+                                $_SESSION['is_admin'] = true;
+                                header('Location: ../kfood_admin/dashboard.php');
+                                break;
+                            case 3: // Crew
+                                $_SESSION['is_crew'] = true;
+                                header('Location: ../kfood_crew/index.php');
+                                break;
+                            case 4: // Customer
+                                $_SESSION['is_customer'] = true;
+                                // Check if there's a redirect URL stored in session
+                                if (isset($_SESSION['redirect_after_login'])) {
+                                    $redirect = $_SESSION['redirect_after_login'];
+                                    unset($_SESSION['redirect_after_login']);
+                                    header('Location: ' . $redirect);
+                                } else {
+                                    header('Location: index.php');
+                                }
+                                break;
+                            default:
+                                // Invalid role_id
+                                $error = 'Invalid account type. Please contact support.';
+                                // Log the error
+                                error_log("Invalid role_id ({$user['role_id']}) for user ID: {$user['user_id']}");
+                        }
+                        exit();
+                    } else {
+                        $error = 'Invalid credentials';
+                    }
+                } else {
+                    $error = 'Invalid credentials';
+                }
+            }
+            $stmt->close();
         }
     }
 }

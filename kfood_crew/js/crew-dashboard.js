@@ -28,20 +28,23 @@ class OrderManager {
 
   async initializeWebSocket() {
     try {
-      // Check server status first
-      const statusResponse = await fetch("api/server-status.php");
-      const statusData = await statusResponse.json();
+      // Get WebSocket configuration
+      const configResponse = await fetch("api/get-websocket-config.php");
+      const config = await configResponse.json();
 
-      if (statusData.status !== "running") {
-        throw new Error("WebSocket server is not running");
+      if (!config.enabled) {
+        throw new Error("WebSocket service is disabled");
       }
 
-      // Create WebSocket manager with configuration
+      // Initialize WebSocket with secure configuration
       this.wsManager = new WebSocketManager({
-        host: window.location.hostname,
-        path: "/websocket",
-        reconnectAttempts: 5,
-        reconnectInterval: 3000,
+        protocol: window.location.protocol === "https:" ? "wss:" : "ws:",
+        host: config.host || window.location.hostname,
+        port: config.port || "5500",
+        path: "/ws",
+        reconnectAttempts: config.maxRetries || 5,
+        reconnectInterval: config.reconnectDelay || 3000,
+        pingInterval: config.pingInterval || 30000,
         debug: true,
       });
 
@@ -72,6 +75,8 @@ class OrderManager {
           "Connection lost. Attempting to reconnect..."
         );
       }
+      // Start polling as backup
+      this.startPolling();
     });
 
     this.wsManager.on("error", (error) => {
@@ -82,11 +87,63 @@ class OrderManager {
       this.startPolling();
     });
 
-    // Order events
-    this.wsManager.on("new_order", (order) => this.handleNewOrder(order));
-    this.wsManager.on("order_update", (update) =>
-      this.handleOrderUpdate(update)
-    );
+    // Order events with validation and error handling
+    this.wsManager.on("orderPlaced", (data) => {
+      try {
+        if (!this.validateOrderData(data)) {
+          throw new Error("Invalid order data received");
+        }
+        this.handleNewOrder(data);
+        if (window.notifications) {
+          window.notifications.info("New order received!");
+        }
+      } catch (error) {
+        console.error("Error handling new order:", error);
+      }
+    });
+
+    this.wsManager.on("orderUpdated", (data) => {
+      try {
+        if (!this.validateOrderUpdate(data)) {
+          throw new Error("Invalid order update received");
+        }
+        this.handleOrderUpdate(data);
+      } catch (error) {
+        console.error("Error handling order update:", error);
+      }
+    });
+
+    // Subscribe as crew member
+    this.wsManager.send({
+      type: "subscribe",
+      role: "crew",
+    });
+  }
+
+  validateOrderData(data) {
+    if (!data || typeof data !== "object") return false;
+
+    const required = ["orderId", "customerInfo", "items", "amounts", "status"];
+    return required.every((field) => {
+      if (!data[field]) {
+        console.error(`Missing required field: ${field}`);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  validateOrderUpdate(data) {
+    if (!data || typeof data !== "object") return false;
+
+    const required = ["orderId", "status", "timestamp"];
+    return required.every((field) => {
+      if (!data[field]) {
+        console.error(`Missing required field in update: ${field}`);
+        return false;
+      }
+      return true;
+    });
   }
 
   startPolling() {

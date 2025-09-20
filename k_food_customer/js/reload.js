@@ -12,6 +12,7 @@
       // Use proper WebSocket URL format with single forward slash
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = "127.0.0.1:5500";
+      // Fix: Remove double slashes and ensure correct WebSocket URL format
       ws = new WebSocket(`${protocol}//${host}/ws`);
 
       ws.onopen = () => {

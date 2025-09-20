@@ -32,20 +32,56 @@ async function validateOrderForm(form) {
 }
 
 async function prepareOrderData(form) {
-  // Get selected payment method
-  const selectedPayment = form.querySelector(
-    'input[name="paymentMethod"]:checked'
+  if (!form || !(form instanceof HTMLFormElement)) {
+    throw new Error("Invalid form element provided");
+  }
+
+  // Get selected payment method with robust validation
+  const paymentInputs = form.querySelectorAll('input[name="paymentMethod"]');
+  if (paymentInputs.length === 0) {
+    throw new Error("Payment method options not found");
+  }
+
+  const selectedPayment = Array.from(paymentInputs).find(
+    (input) => input.checked
   );
   if (!selectedPayment) {
     throw new Error("Please select a payment method");
   }
 
-  // Get cart items
-  const cartItems = JSON.parse(
-    document.getElementById("cart-data")?.value || "[]"
-  );
+  // Get cart items with error handling
+  let cartItems = [];
+  const cartDataElement = document.getElementById("cart-data");
+  if (!cartDataElement?.value) {
+    throw new Error("Cart data is missing");
+  }
+
+  try {
+    cartItems = JSON.parse(cartDataElement.value);
+    if (!Array.isArray(cartItems)) {
+      throw new Error("Invalid cart data format");
+    }
+  } catch (error) {
+    console.error("Cart parse error:", error);
+    throw new Error("Unable to process cart data");
+  }
+
   if (!cartItems.length) {
     throw new Error("Your cart is empty");
+  }
+
+  // Validate cart items structure
+  if (
+    !cartItems.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        typeof item.product_id !== "undefined" &&
+        typeof item.quantity === "number" &&
+        item.quantity > 0
+    )
+  ) {
+    throw new Error("Invalid items in cart");
   }
 
   // Calculate amounts using the amount handler
@@ -56,15 +92,30 @@ async function prepareOrderData(form) {
     document.getElementById("seniorDiscount")?.checked || false;
   const pwdDiscount = document.getElementById("pwdDiscount")?.checked || false;
 
-  // Prepare the complete order data structure
+  // Safely get form field value with validation
+  const getFieldValue = (selector, required = true) => {
+    const element = form.querySelector(selector);
+    if (!element) {
+      if (required) {
+        throw new Error(`Required field not found: ${selector}`);
+      }
+      return "";
+    }
+    const value = element.value.trim();
+    if (required && !value) {
+      throw new Error(`${selector.replace("#", "")} is required`);
+    }
+    return value;
+  };
+
+  // Prepare the complete order data structure with validation
   const orderData = {
     customerInfo: {
-      name: form.querySelector("#fullName").value,
-      email: form.querySelector("#email").value,
-      phone: form.querySelector("#phone").value,
-      address: form.querySelector("#address").value,
-      deliveryInstructions:
-        form.querySelector("#deliveryInstructions")?.value || "",
+      name: getFieldValue("#fullName"),
+      email: getFieldValue("#email"),
+      phone: getFieldValue("#phone"),
+      address: getFieldValue("#address"),
+      deliveryInstructions: getFieldValue("#deliveryInstructions", false),
     },
     payment: {
       method: selectedPayment.value,
@@ -91,15 +142,52 @@ async function prepareOrderData(form) {
     },
   };
 
-  // Add GCash details if that's the selected payment method
+  // Add GCash details if that's the selected payment method with robust validation
   if (orderData.payment.method === "gcash") {
-    orderData.payment.gcashNumber = form.querySelector("#gcashNumber")?.value;
-    orderData.payment.gcashReference =
-      form.querySelector("#gcashReference")?.value;
+    const gcashNumber = getFieldValue("#gcashNumber");
+    const gcashReference = getFieldValue("#gcashReference");
 
-    if (!orderData.payment.gcashNumber || !orderData.payment.gcashReference) {
-      throw new Error("Please provide complete GCash payment details");
+    // Validate GCash number format (11 digits)
+    if (!/^\d{11}$/.test(gcashNumber)) {
+      throw new Error("GCash number must be 11 digits");
     }
+
+    // Validate reference number format
+    if (!/^[A-Za-z0-9]{6,}$/.test(gcashReference)) {
+      throw new Error("Invalid GCash reference number format");
+    }
+
+    orderData.payment.gcashNumber = gcashNumber;
+    orderData.payment.gcashReference = gcashReference;
+  }
+
+  // Final validation of the complete order data
+  const requiredFields = ["name", "email", "phone", "address"];
+  for (const field of requiredFields) {
+    if (!orderData.customerInfo[field]) {
+      throw new Error(
+        `${field.charAt(0).toUpperCase() + field.slice(1)} is required`
+      );
+    }
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(orderData.customerInfo.email)) {
+    throw new Error("Please enter a valid email address");
+  }
+
+  // Validate phone format (must be numbers, optionally starting with +)
+  if (!/^\+?\d{10,}$/.test(orderData.customerInfo.phone)) {
+    throw new Error("Please enter a valid phone number");
+  }
+
+  // Make sure we have a valid total amount
+  if (
+    typeof orderData.amounts.total !== "number" ||
+    orderData.amounts.total <= 0
+  ) {
+    throw new Error("Invalid order total");
   }
 
   return orderData;

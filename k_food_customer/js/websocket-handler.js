@@ -4,18 +4,23 @@ class WebSocketHandler {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000; // Start with 1 second delay
+    this.isReady = false;
+    this.messageQueue = [];
     this.initialize();
   }
 
   initialize() {
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = window.location.hostname;
-      const port = "8080"; // WebSocket server port
-      this.socket = new WebSocket(`${protocol}//${host}:${port}`);
+      const config = WebSocketConfig.getConfig();
+      this.socket = new WebSocket(config.url);
       this.attachEventListeners();
     } catch (error) {
       console.error("Failed to initialize WebSocket:", error);
+      if (window.notifications) {
+        window.notifications.error(
+          "Connection error. Will retry automatically."
+        );
+      }
     }
   }
 
@@ -24,6 +29,8 @@ class WebSocketHandler {
       console.log("WebSocket connection established");
       this.reconnectAttempts = 0; // Reset reconnection attempts on successful connection
       this.reconnectDelay = 1000; // Reset delay
+      this.isReady = true;
+      this.processMessageQueue(); // Process any queued messages
     });
 
     this.socket.addEventListener("error", (error) => {
@@ -47,6 +54,7 @@ class WebSocketHandler {
 
   handleReconnection() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.isReady = false; // Mark as not ready during reconnection
       setTimeout(() => {
         console.log(
           `Attempting to reconnect (${this.reconnectAttempts + 1}/${
@@ -68,6 +76,36 @@ class WebSocketHandler {
     }
   }
 
+  sendMessage(message) {
+    if (!this.socket || !message) return;
+
+    if (this.socket.readyState === WebSocket.OPEN && this.isReady) {
+      this.socket.send(JSON.stringify(message));
+    } else {
+      // Queue the message if socket isn't ready
+      this.messageQueue.push(message);
+    }
+  }
+
+  processMessageQueue() {
+    while (
+      this.messageQueue.length > 0 &&
+      this.isReady &&
+      this.socket.readyState === WebSocket.OPEN
+    ) {
+      const message = this.messageQueue.shift();
+      try {
+        this.socket.send(JSON.stringify(message));
+      } catch (error) {
+        console.error("Error sending queued message:", error);
+        // Re-queue on error if it seems recoverable
+        if (error.name !== "InvalidStateError") {
+          this.messageQueue.unshift(message);
+        }
+      }
+    }
+  }
+
   handleMessage(data) {
     switch (data.type) {
       case "order_status":
@@ -76,8 +114,15 @@ class WebSocketHandler {
       case "error":
         this.handleError(data);
         break;
+      // Gracefully handle known but non-actionable types
+      case "welcome":
+      case "ping":
+        // Optionally log or ignore these message types
+        // console.info(`Received '${data.type}' message from server.`);
+        break;
       default:
-        console.warn("Unknown message type:", data.type);
+        // Log and ignore unknown message types without breaking flow
+        console.warn("Unknown message type:", data.type, data);
     }
   }
 

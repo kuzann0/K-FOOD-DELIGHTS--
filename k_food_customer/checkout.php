@@ -1,4 +1,6 @@
 <?php
+
+// Start session and include configuration
 session_start();
 include 'config.php';
 
@@ -14,6 +16,8 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
+
+$userId = $_SESSION['user_id'];
 
 // Fetch user information from database with validation
 $userId = $_SESSION['user_id'];
@@ -34,7 +38,7 @@ $result = $stmt->get_result();
 $userInfo = $result->fetch_assoc();
 $stmt->close();
 
-// Validate required user information
+// Validate required user information (must have all fields before proceeding)
 if (!$userInfo) {
     error_log("User information not found for ID: " . $userId);
     die("User profile data not found. Please update your profile first.");
@@ -53,12 +57,14 @@ if (!filter_var($userInfo['email'], FILTER_VALIDATE_EMAIL)) {
     die("Invalid email format in profile. Please update your profile.");
 }
 
-// Format full name
+// Format full name for order
 $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Map handler for confirmLocation() -->
+    <script src="js/map-handler.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
@@ -1305,7 +1311,9 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
 
     <div class="checkout-container">
         <div class="checkout-form">
-            <form id="checkoutForm">
+            <form id="checkoutForm" method="POST" action="process_order.php" autocomplete="off">
+                <!-- Hidden userId for WebSocket authentication -->
+                <input type="hidden" id="userId" name="userId" value="<?php echo htmlspecialchars($userId); ?>">
                 <div class="form-section">
                     <h2>Billing Information</h2>
                     <div class="form-group">
@@ -1377,14 +1385,16 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                 <div class="form-section">
                     <h2>Payment Method</h2>
                     <div class="payment-methods">
-                        <div class="payment-method" data-method="cash">
-                            <img src="../resources/images/cash-icon.png" alt="Cash on Delivery">
-                            <div>Cash on Delivery</div>
-                        </div>
-                        <div class="payment-method" data-method="gcash">
-                            <img src="../resources/images/gcash-icon.png" alt="GCash">
-                            <div>GCash</div>
-                        </div>
+                        <label class="payment-method-option" style="display: flex; align-items: center; gap: 12px; background: #fff6f0; border-radius: 12px; padding: 12px 18px; margin-bottom: 12px; cursor: pointer; border: 2px solid #ffe0d2;">
+                            <input type="radio" name="paymentMethod" value="cash" style="accent-color: #ff6b6b; width: 20px; height: 20px; margin-right: 10px;">
+                            <img src="../resources/images/cash-icon.png" alt="Cash on Delivery" style="width: 36px; height: 36px;">
+                            <span style="font-size: 1.1em; color: #d35400; font-weight: 500;">Cash on Delivery</span>
+                        </label>
+                        <label class="payment-method-option" style="display: flex; align-items: center; gap: 12px; background: #f0f8ff; border-radius: 12px; padding: 12px 18px; margin-bottom: 12px; cursor: pointer; border: 2px solid #b2e0ff;">
+                            <input type="radio" name="paymentMethod" value="gcash" style="accent-color: #0091ea; width: 20px; height: 20px; margin-right: 10px;">
+                            <img src="../resources/images/gcash-icon.png" alt="GCash" style="width: 36px; height: 36px;">
+                            <span style="font-size: 1.1em; color: #0077b6; font-weight: 500;">GCash</span>
+                        </label>
                     </div>
 
                     <div id="gcash-details">
@@ -1478,7 +1488,7 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                     <span id="totalAmount">₱0.00</span>
                 </div>
             </div>
-            <button type="submit" class="place-order-btn" id="placeOrderBtn">Place Order</button>
+            <button type="button" class="place-order-btn" id="placeOrderBtn">Place Order</button>
         </div>
     </div>
 
@@ -1568,6 +1578,10 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
     };
 
     class NotificationManager {
+        // Add init method to avoid TypeError when notificationManager.init() is called
+        init() {
+            // No initialization needed, present for compatibility
+        }
         constructor() {
             this.container = document.createElement('div');
             this.container.className = 'notification-container';
@@ -1624,6 +1638,11 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
 
     // Cart manager for handling cart operations
     class CartManager {
+        // Add init method to avoid TypeError when cartManager.init() is called
+        init() {
+            // Optionally, update display or perform any setup
+            this.updateDisplay();
+        }
         constructor() {
             this.items = this.loadCart();
         }
@@ -1782,18 +1801,66 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         notificationManager.show('Delivery address selection is temporarily disabled. Using default address.', NotificationType.INFO);
     });
 </script>
-<script src="js/order-amount-handler.js"></script>
-<script src="js/checkout-validation.js"></script>
-<script src="js/websocket-handler.js"></script>
-<script src="js/order-confirmation-handler.js"></script>
+    <!-- Order logic scripts -->
+    <!-- WebSocket Configuration -->
+    <script src="js/websocket-config.js"></script>
+    
+    <!-- Core Libraries -->
+    <script src="js/order-amount-handler.js"></script>
+    <script src="js/checkout-validation.js"></script>
+    
+    <!-- WebSocket and Order Handling -->
+    <script src="js/websocket-handler.js"></script>
+    <script src="js/order-confirmation-handler.js"></script>
+    <script src="js/order-submission.js"></script>
 <script>
     // Initialize handlers after DOM is fully loaded
     document.addEventListener('DOMContentLoaded', () => {
+        // Initialize order confirmation handler
+        if (typeof OrderConfirmationHandler === 'undefined') {
+            console.error('OrderConfirmationHandler not loaded. Check script dependencies.');
+            return;
+        }
+
+        // Set up place order button handler
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        if (placeOrderBtn) {
+            placeOrderBtn.addEventListener('click', async () => {
+                try {
+                    // Validate form
+                    const form = document.getElementById('checkoutForm');
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        return;
+                    }
+
+                    // Get order data
+                    const orderData = {
+                        items: cartManager.items,
+                        total: parseFloat(document.getElementById('totalAmount').textContent.replace('₱', '')),
+                        customerId: document.getElementById('userId').value,
+                        customerName: document.getElementById('fullName').value,
+                        phone: document.getElementById('phone').value,
+                        address: document.getElementById('address').value,
+                        instructions: document.getElementById('deliveryInstructions').value,
+                        paymentMethod: document.querySelector('input[name="paymentMethod"]:checked')?.value,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Show confirmation modal with order details
+                    await window.orderConfirmationHandler.showConfirmation(orderData);
+
+                } catch (error) {
+                    console.error('Error processing order:', error);
+                    notificationManager.show('Error processing order. Please try again.', NotificationType.ERROR);
+                }
+            });
+        }
         // Initialize cart and notifications
         cartManager.init();
         notificationManager.init();
 
-        // Initialize order confirmation handler
+        // Initialize order confirmation handler (handles modal and order submission)
         if (typeof OrderConfirmationHandler !== 'undefined') {
             OrderConfirmationHandler.init();
         } else {
@@ -1814,7 +1881,32 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         // Listen for place order clicks
         document.getElementById('placeOrderBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
+            // Gather all required fields and validate
+            const checkoutForm = document.getElementById('checkoutForm');
+            if (!checkoutForm) return;
+
+            // Payment method validation: ensure a radio is selected
+            const paymentMethodInput = checkoutForm.querySelector('input[name="paymentMethod"]:checked');
+            const paymentMethod = paymentMethodInput ? paymentMethodInput.value : null;
+            if (!paymentMethod) {
+                notificationManager.show('Please select a payment method.', NotificationType.ERROR);
+                // Optionally, highlight the payment section
+                document.querySelector('.payment-methods').style.boxShadow = '0 0 0 2px #ff6b6b';
+                setTimeout(() => {
+                    document.querySelector('.payment-methods').style.boxShadow = '';
+                }, 1500);
+                return;
+            }
+
+            // Prepare order data
             const orderData = prepareOrderData();
+            orderData.payment = orderData.payment || {};
+            orderData.payment.method = paymentMethod;
+
+            // Validate required fields (landmark, instructions, etc. as needed)
+            // ...additional validation can be added here...
+
+            // Show confirmation modal
             OrderConfirmationHandler.show(orderData);
         });
     });
@@ -1871,65 +1963,8 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         }
     });
 
-    // WebSocket handling
-    let socket = null;
-    function initWebSocket() {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = window.location.hostname;
-        const wsPort = '8080'; // Default WebSocket port
-        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws`;
-
-        try {
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = function() {
-                console.log('WebSocket connection established');
-                // Authenticate as customer
-                socket.send(JSON.stringify({
-                    action: 'authenticate',
-                    userType: 'customer'
-                }));
-            };
-
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                handleWebSocketMessage(data);
-            };
-
-            socket.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                showNotification('error', 'Order tracking system connection failed. Orders will still be processed.');
-            };
-
-            socket.onclose = function() {
-                console.log('WebSocket connection closed');
-                // Attempt to reconnect after 5 seconds
-                setTimeout(initWebSocket, 5000);
-            };
-        } catch (error) {
-            console.error('Failed to establish WebSocket connection:', error);
-        }
-    }
-
-    function handleWebSocketMessage(data) {
-        switch (data.type) {
-            case 'authentication':
-                console.log('Authentication status:', data.status);
-                break;
-            case 'order_update':
-                handleOrderUpdate(data);
-                break;
-        }
-    }
-
-    function handleOrderUpdate(data) {
-        if (data.orderId && data.status) {
-            showNotification('info', `Order #${data.orderId} status: ${data.status}`);
-        }
-    }
-
-    // Initialize WebSocket connection when page loads
-    initWebSocket();
+    // WebSocket handling is managed by order-confirmation-handler.js
+    // This ensures real-time updates for order status and crew dashboard
 
     // Promo code handling
     async function applyPromoCode() {

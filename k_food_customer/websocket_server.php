@@ -19,6 +19,7 @@ class OrderWebSocket implements MessageComponentInterface {
     protected $conn;
     protected $loop;
     protected $lastCheckTime;
+    protected $messageQueue;
 
     public function __construct(LoopInterface $loop) {
         $this->clients = new \SplObjectStorage;

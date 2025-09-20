@@ -103,9 +103,7 @@ include 'config.php';
             Selisana create unique dishes, from lasagna and sushi to their
             signature spicy chicken pastil. We cater to students, families,
             professionals, and anyone craving exciting flavors. We're passionate
-            about providing high-quality food and memorable dining experiences,
-            and we strive to be Quezon City's leading provider of innovative
-            Filipino-fusion dishes.
+            about providing high-quality food and memorable dining experiences.
           </p>
         </div>
       </section>

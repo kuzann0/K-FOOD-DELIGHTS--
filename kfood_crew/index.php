@@ -110,7 +110,8 @@ $pageTitle = "Crew Dashboard";
             <div class="sidebar-header">
                 <img src="../resources/images/logo.png" alt="K-Food Delight Logo" class="sidebar-logo">
                 <h2>Crew Dashboard</h2>
-                <p class="crew-name">Welcome, <?php echo htmlspecialchars($crew['first_name'] . ' ' . $crew['last_name']); ?></p>
+                <p class="crew-name">Welcome, <?php echo htmlspecialchars($crew['first_name']); ?></p>  
+                <!-- ' ' . $crew['last_name'] -->
             </div>
             
             <nav>
@@ -177,8 +178,97 @@ $pageTitle = "Crew Dashboard";
     <div id="notification-container"></div>
 
     <!-- Scripts -->
+    <!-- WebSocket Configuration -->
+    <script src="../k_food_customer/js/websocket-config.js"></script>
+    
+    <!-- Core Libraries -->
     <script src="js/notification-system.js"></script>
     <script src="js/websocket-manager.js"></script>
+    
+    <script>
+    // Initialize WebSocket connection for crew dashboard
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // Initialize WebSocket manager
+            const ws = new WebSocketManager(WebSocketConfig.getConfig());
+            
+            // Connect and authenticate
+            await ws.connect();
+            
+            // Listen for new orders
+            ws.on(WebSocketMessageTypes.NEW_ORDER, (orderData) => {
+                // Update orders display
+                const ordersList = document.getElementById('activeOrders');
+                if (ordersList) {
+                    const orderElement = createOrderElement(orderData);
+                    ordersList.insertBefore(orderElement, ordersList.firstChild);
+                    
+                    // Show notification
+                    notificationManager.show('New order received!', 'success');
+                }
+            });
+            
+            console.log('Crew dashboard WebSocket initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize WebSocket connection:', error);
+            notificationManager.show('Connection error. Please refresh the page.', 'error');
+        }
+    });
+    
+    function createOrderElement(order) {
+        const orderDiv = document.createElement('div');
+        orderDiv.className = 'order-card new';
+        orderDiv.innerHTML = `
+            <div class="order-header">
+                <h3>Order #${order.orderId}</h3>
+                <span class="order-time">${new Date(order.timestamp).toLocaleTimeString()}</span>
+            </div>
+            <div class="order-details">
+                <p><strong>Customer:</strong> ${order.customerName}</p>
+                <p><strong>Items:</strong></p>
+                <ul>
+                    ${order.items.map(item => `
+                        <li>${item.quantity}x ${item.name}</li>
+                    `).join('')}
+                </ul>
+                <p><strong>Total:</strong> ₱${order.total.toFixed(2)}</p>
+                <p><strong>Address:</strong> ${order.address}</p>
+                ${order.instructions ? `<p><strong>Instructions:</strong> ${order.instructions}</p>` : ''}
+            </div>
+            <div class="order-actions">
+                <button class="btn accept-btn" onclick="updateOrderStatus('${order.orderId}', 'confirmed')">
+                    <i class="fas fa-check"></i> Accept
+                </button>
+                <button class="btn reject-btn" onclick="updateOrderStatus('${order.orderId}', 'cancelled')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+        `;
+        return orderDiv;
+    }
+    
+    async function updateOrderStatus(orderId, status) {
+        try {
+            await ws.send({
+                type: WebSocketMessageTypes.ORDER_UPDATED,
+                data: {
+                    orderId,
+                    status,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
+            // Update UI
+            const orderElement = document.querySelector(`[data-order-id="${orderId}"]`);
+            if (orderElement) {
+                orderElement.className = `order-card ${status}`;
+                notificationManager.show(`Order ${status}`, 'success');
+            }
+        } catch (error) {
+            console.error('Failed to update order status:', error);
+            notificationManager.show('Failed to update order status', 'error');
+        }
+    }</script>
     <script>
         // Initialize systems after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {

@@ -2,8 +2,12 @@
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
 
-// requireAdminLogin();
 $admin = getCurrentAdmin();
+// Require admin login for dashboard access
+if (!$admin) {
+    header('Location: admin_login.php');
+    exit();
+}
 $pageTitle = "Dashboard";
 $currentModule = "dashboard";
 
@@ -117,6 +121,7 @@ include 'includes/header_common.php';
                 <div class="header-user">
                     <span class="user-name"><?php echo htmlspecialchars($admin['username']); ?></span>
                     <span class="user-role"><?php echo htmlspecialchars($admin['role_name']); ?></span>
+                    <!-- Logout button: securely logs out admin and redirects to admin_login.php -->
                     <a href="logout.php" class="logout-btn">Logout</a>
                 </div>
             </header>

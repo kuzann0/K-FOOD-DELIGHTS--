@@ -1,0 +1,174 @@
+/**
+ * AjaxManager - Handles AJAX communication for K-Food Delights
+ */
+class AjaxManager {
+  constructor(config = {}) {
+    this.config = {
+      baseUrl: "",
+      pollingInterval: 5000, // 5 seconds default
+      maxRetries: 3,
+      retryDelay: 2000,
+      ...config,
+    };
+
+    this.activePolls = new Map();
+    this.eventHandlers = new Map();
+  }
+
+  /**
+   * Makes an AJAX request with automatic retry on failure
+   */
+  async request(url, options = {}) {
+    let retries = 0;
+
+    while (retries <= this.config.maxRetries) {
+      try {
+        const response = await fetch(this.config.baseUrl + url, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            ...options.headers,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        retries++;
+        console.error(`AJAX request failed (attempt ${retries}):`, error);
+
+        if (retries <= this.config.maxRetries) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.config.retryDelay * retries)
+          );
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  /**
+   * Starts polling an endpoint at regular intervals
+   */
+  startPolling(key, url, interval = null) {
+    if (this.activePolls.has(key)) {
+      console.warn(`Polling already active for key: ${key}`);
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const data = await this.request(url);
+        this.emit(key, data);
+      } catch (error) {
+        console.error(`Polling error for ${key}:`, error);
+        this.emit("error", { key, error });
+      }
+    };
+
+    // Initial poll
+    poll();
+
+    // Set up interval
+    const timerId = setInterval(poll, interval || this.config.pollingInterval);
+    this.activePolls.set(key, timerId);
+  }
+
+  /**
+   * Stops polling for a specific key
+   */
+  stopPolling(key) {
+    const timerId = this.activePolls.get(key);
+    if (timerId) {
+      clearInterval(timerId);
+      this.activePolls.delete(key);
+    }
+  }
+
+  /**
+   * Registers an event handler
+   */
+  on(event, handler) {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, new Set());
+    }
+    this.eventHandlers.get(event).add(handler);
+  }
+
+  /**
+   * Removes an event handler
+   */
+  off(event, handler) {
+    const handlers = this.eventHandlers.get(event);
+    if (handlers) {
+      handlers.delete(handler);
+    }
+  }
+
+  /**
+   * Emits an event to all registered handlers
+   */
+  emit(event, data) {
+    const handlers = this.eventHandlers.get(event);
+    if (handlers) {
+      handlers.forEach((handler) => {
+        try {
+          handler(data);
+        } catch (error) {
+          console.error(`Error in ${event} handler:`, error);
+        }
+      });
+    }
+  }
+
+  /**
+   * Submits a new order
+   */
+  async submitOrder(orderData) {
+    return await this.request("/api/ajax/submit_order.php", {
+      method: "POST",
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  /**
+   * Checks order status
+   */
+  async checkOrderStatus(orderId) {
+    return await this.request(
+      `/api/ajax/check_order_status.php?order_id=${orderId}`
+    );
+  }
+
+  /**
+   * Updates order status (crew only)
+   */
+  async updateOrderStatus(orderId, status) {
+    return await this.request("/api/ajax/update_order_status.php", {
+      method: "POST",
+      body: JSON.stringify({ orderId, status }),
+    });
+  }
+
+  /**
+   * Fetches orders for crew dashboard
+   */
+  async fetchCrewOrders(since) {
+    return await this.request(`/api/ajax/fetch_orders.php?since=${since}`);
+  }
+
+  /**
+   * Monitors orders for admin dashboard
+   */
+  async monitorOrders(since, status = null) {
+    let url = `/api/ajax/monitor_orders.php?since=${since}`;
+    if (status) {
+      url += `&status=${status}`;
+    }
+    return await this.request(url);
+  }
+}

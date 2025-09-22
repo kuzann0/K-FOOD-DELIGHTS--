@@ -111,7 +111,7 @@ async function prepareOrderData(form) {
   // Prepare the complete order data structure with validation
   const orderData = {
     customerInfo: {
-      name: getFieldValue("#customerName"),
+      name: getFieldValue("#fullName"),
       email: getFieldValue("#email"),
       phone: getFieldValue("#phone"),
       address: getFieldValue("#address"),
@@ -128,6 +128,7 @@ async function prepareOrderData(form) {
     })),
     amounts: {
       subtotal: amounts.subtotal,
+      deliveryFee: amounts.deliveryFee,
       totalDiscount: amounts.discount,
       total: amounts.total,
     },

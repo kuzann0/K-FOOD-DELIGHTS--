@@ -97,17 +97,12 @@ class CheckoutValidator {
       this.errors.push("Invalid subtotal amount");
     }
 
-    if (typeof amounts.deliveryFee !== "number" || amounts.deliveryFee < 0) {
-      this.errors.push("Invalid delivery fee");
-    }
-
     if (typeof amounts.total !== "number" || amounts.total < 0) {
       this.errors.push("Invalid total amount");
     }
 
     // Verify total calculation
-    const expectedTotal =
-      amounts.subtotal + amounts.deliveryFee - (amounts.discount || 0);
+    const expectedTotal = amounts.subtotal - (amounts.discount || 0);
     if (Math.abs(expectedTotal - amounts.total) > 0.01) {
       this.errors.push("Total amount calculation mismatch");
     }

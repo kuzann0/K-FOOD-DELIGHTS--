@@ -1,5 +1,4 @@
 // Constants
-const DELIVERY_FEE = 50;
 const SENIOR_DISCOUNT = 0.2;
 const PWD_DISCOUNT = 0.15;
 
@@ -7,7 +6,6 @@ const PWD_DISCOUNT = 0.15;
 let cart = [];
 let orderState = {
   subtotal: 0,
-  deliveryFee: DELIVERY_FEE,
   discounts: {
     senior: {
       active: false,

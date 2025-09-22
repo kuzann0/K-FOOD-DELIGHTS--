@@ -2,8 +2,6 @@
 const ORDER_CONSTANTS = {
   MIN_ORDER_AMOUNT: 100.0,
   MAX_ORDER_AMOUNT: 10000.0,
-  BASE_DELIVERY_FEE: 50.0,
-  FREE_DELIVERY_THRESHOLD: 1000.0,
   MAX_DISCOUNT_PERCENTAGE: 25.0,
 };
 
@@ -32,15 +30,7 @@ function validateAmounts(amounts, cartTotal) {
     isValid = false;
   }
 
-  // Validate delivery fee
-  const expectedDeliveryFee =
-    amounts.subtotal >= ORDER_CONSTANTS.FREE_DELIVERY_THRESHOLD
-      ? 0
-      : ORDER_CONSTANTS.BASE_DELIVERY_FEE;
-  if (!numbersMatch(amounts.deliveryFee, expectedDeliveryFee)) {
-    errors.push("Invalid delivery fee calculation");
-    isValid = false;
-  }
+  // Delivery fee validation removed
 
   // Validate discount
   const maxDiscount =
@@ -53,8 +43,7 @@ function validateAmounts(amounts, cartTotal) {
   }
 
   // Validate total
-  const expectedTotal =
-    amounts.subtotal + amounts.deliveryFee - amounts.discount;
+  const expectedTotal = amounts.subtotal - amounts.discount;
   if (!numbersMatch(amounts.total, expectedTotal)) {
     errors.push("Order total calculation mismatch");
     isValid = false;
@@ -83,7 +72,6 @@ function formatCurrency(amount) {
 function updateOrderSummary(amounts) {
   const summaryElements = {
     subtotal: document.getElementById("display-subtotal"),
-    deliveryFee: document.getElementById("display-delivery-fee"),
     discount: document.getElementById("display-discount"),
     total: document.getElementById("display-total"),
   };
@@ -101,19 +89,14 @@ function recalculateAmounts(cartItems, promoDiscount = 0) {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const deliveryFee =
-    subtotal >= ORDER_CONSTANTS.FREE_DELIVERY_THRESHOLD
-      ? 0
-      : ORDER_CONSTANTS.BASE_DELIVERY_FEE;
   const existingDiscount = parseFloat(
     document.getElementById("discount")?.value || "0"
   );
   const totalDiscount = existingDiscount + promoDiscount;
-  const total = subtotal + deliveryFee - totalDiscount;
+  const total = subtotal - totalDiscount;
 
   return {
     subtotal,
-    deliveryFee,
     discount: totalDiscount,
     total,
   };

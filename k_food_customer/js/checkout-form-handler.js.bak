@@ -1,0 +1,245 @@
+/**
+ * Form validator and handler for KFoodDelights checkout
+ */
+
+class CheckoutFormHandler {
+  constructor() {
+    this.form = document.getElementById("checkoutForm");
+    this.submitButton = document.getElementById("placeOrderBtn");
+    this.requiredFields = {
+      customerName: { type: "text", minLength: 2 },
+      email: { type: "email", pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+      phone: { type: "tel", pattern: /^[0-9]{11}$/ },
+      address: { type: "text", minLength: 5 },
+    };
+    this.init();
+  }
+
+  init() {
+    // Bind form submit handler
+    if (this.form) {
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+    }
+
+    // Bind place order button
+    if (this.submitButton) {
+      this.submitButton.addEventListener("click", (e) =>
+        this.handlePlaceOrder(e)
+      );
+    }
+
+    // Add real-time validation to required fields
+    Object.keys(this.requiredFields).forEach((fieldId) => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.addEventListener("input", () => this.validateField(fieldId));
+        field.addEventListener("blur", () => this.validateField(fieldId));
+      }
+    });
+
+    // Initialize payment method handling
+    this.initPaymentMethodHandling();
+  }
+
+  validateField(fieldId) {
+    const field = document.getElementById(fieldId);
+    const rules = this.requiredFields[fieldId];
+    const errorElement = document.getElementById(`${fieldId}Error`);
+    let isValid = true;
+    let errorMessage = "";
+
+    if (!field || !rules) return true;
+
+    const value = field.value.trim();
+
+    // Check if empty
+    if (!value) {
+      isValid = false;
+      errorMessage = `${
+        fieldId.charAt(0).toUpperCase() + fieldId.slice(1)
+      } is required`;
+    }
+    // Check minLength
+    else if (rules.minLength && value.length < rules.minLength) {
+      isValid = false;
+      errorMessage = `${
+        fieldId.charAt(0).toUpperCase() + fieldId.slice(1)
+      } must be at least ${rules.minLength} characters`;
+    }
+    // Check pattern
+    else if (rules.pattern && !rules.pattern.test(value)) {
+      isValid = false;
+      errorMessage = `Please enter a valid ${fieldId}`;
+    }
+
+    // Update UI
+    if (errorElement) {
+      errorElement.textContent = errorMessage;
+      errorElement.style.display = isValid ? "none" : "block";
+    }
+
+    field.classList.toggle("invalid", !isValid);
+    return isValid;
+  }
+
+  validateAllFields() {
+    let isValid = true;
+    Object.keys(this.requiredFields).forEach((fieldId) => {
+      if (!this.validateField(fieldId)) {
+        isValid = false;
+      }
+    });
+    return isValid;
+  }
+
+  validatePayment() {
+    const paymentMethod = document.querySelector(
+      'input[name="paymentMethod"]:checked'
+    );
+    if (!paymentMethod) {
+      this.showError("Please select a payment method");
+      return false;
+    }
+
+    if (paymentMethod.value === "gcash") {
+      const reference = document.getElementById("gcashReference");
+      if (!reference || !reference.value.trim()) {
+        this.showError("Please enter GCash reference number");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  initPaymentMethodHandling() {
+    const paymentInputs = document.querySelectorAll(
+      'input[name="paymentMethod"]'
+    );
+    const gcashDetails = document.getElementById("gcash-details");
+
+    paymentInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        if (gcashDetails) {
+          gcashDetails.style.display =
+            input.value === "gcash" ? "block" : "none";
+        }
+      });
+    });
+  }
+
+  async handlePlaceOrder(e) {
+    e.preventDefault();
+
+    // Validate all fields first
+    if (!this.validateAllFields()) {
+      this.showError("Please fill in all required fields correctly");
+      return;
+    }
+
+    // Validate payment
+    if (!this.validatePayment()) {
+      return;
+    }
+
+    try {
+      // Prepare order data
+      const orderData = await this.prepareOrderData();
+
+      // Show confirmation modal
+      if (window.orderConfirmationHandler) {
+        const confirmationResult =
+          await window.orderConfirmationHandler.showConfirmation(orderData);
+        if (!confirmationResult) {
+          throw new Error("Order confirmation cancelled");
+        }
+      }
+    } catch (error) {
+      console.error("Order preparation failed:", error);
+      this.showError(
+        error.message || "Failed to prepare order. Please try again."
+      );
+    }
+  }
+
+  async prepareOrderData() {
+    // Get cart data
+    const cartData = document.getElementById("cart-data");
+    if (!cartData || !cartData.value) {
+      throw new Error("Your cart is empty");
+    }
+
+    let cartItems;
+    try {
+      cartItems = JSON.parse(cartData.value);
+    } catch (error) {
+      throw new Error("Invalid cart data");
+    }
+
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      throw new Error("Your cart is empty");
+    }
+
+    // Calculate amounts
+    const subtotal = cartItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    const discount = this.calculateDiscount(subtotal);
+    const total = subtotal - discount;
+
+    return {
+      customerInfo: {
+        name: document.getElementById("customerName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        address: document.getElementById("address").value.trim(),
+        deliveryInstructions:
+          document.getElementById("deliveryInstructions")?.value.trim() || "",
+      },
+      items: cartItems,
+      payment: {
+        method: document.querySelector('input[name="paymentMethod"]:checked')
+          .value,
+        reference: document.getElementById("gcashReference")?.value || null,
+      },
+      amounts: {
+        subtotal,
+        discount,
+        total,
+      },
+    };
+  }
+
+  calculateDiscount(subtotal) {
+    let discount = 0;
+    const seniorDiscount = document.getElementById("seniorDiscount")?.checked;
+    const pwdDiscount = document.getElementById("pwdDiscount")?.checked;
+
+    if (seniorDiscount) discount += subtotal * 0.2;
+    if (pwdDiscount) discount += subtotal * 0.15;
+
+    return discount;
+  }
+
+  showError(message) {
+    if (window.notificationManager) {
+      window.notificationManager.show(message, "error");
+    } else {
+      alert(message);
+    }
+  }
+
+  showSuccess(message) {
+    if (window.notificationManager) {
+      window.notificationManager.show(message, "success");
+    } else {
+      alert(message);
+    }
+  }
+}
+
+// Initialize checkout form handler when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  window.checkoutFormHandler = new CheckoutFormHandler();
+});

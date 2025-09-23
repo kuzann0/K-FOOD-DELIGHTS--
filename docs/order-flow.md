@@ -7,16 +7,29 @@
 When a customer places an order:
 
 ```javascript
-// Customer side
+// Customer side - Updated structure
 orderConfirmationHandler.showConfirmation({
-    items: [...],
-    total: number,
-    address: string,
-    customerId: string
+    customerName: string,   // Required
+    phone: string,         // Required, 11 digits
+    address: string,       // Required
+    instructions: string,  // Optional
+    items: Array<{
+        name: string,
+        quantity: number,
+        price: number
+    }>,
+    amounts: {
+        subtotal: number,
+        deliveryFee: number,
+        total: number,
+        discount?: number,
+        seniorPwdDiscount?: number
+    },
+    paymentMethod: "cash" | "gcash"
 });
 ```
 
-### 2. WebSocket Communication
+### 2. AJAX Communication
 
 The order flows through these steps:
 
@@ -24,7 +37,7 @@ The order flows through these steps:
 
    - Customer reviews order in modal
    - Clicks "Confirm Order"
-   - `NEW_ORDER` event sent via WebSocket
+   - Order submitted via AJAX POST
 
 2. **Server Processing**
 

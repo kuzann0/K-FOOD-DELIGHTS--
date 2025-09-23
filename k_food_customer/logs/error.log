@@ -1,0 +1,12 @@
+2025-09-23 09:31:58 | {
+    "message": "Please login to place an order",
+    "type": "AUTHENTICATION_ERROR",
+    "userMessage": "Please login to place an order",
+    "file": "D:\\xampp\\htdocs\\capstone\\k_food_customer\\process_order.php",
+    "line": 345,
+    "trace": "#0 {main}",
+    "context": "[]",
+    "timestamp": "2025-09-23 09:31:58",
+    "errorId": "err_68d24cee0c8e6"
+}
+Database logging failed: Table 'k_food_delights.error_logs' doesn't exist

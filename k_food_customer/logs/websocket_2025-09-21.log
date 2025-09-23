@@ -1,0 +1,30 @@
+[2025-09-21 08:41:56] [INFO] Database connection established successfully
+[2025-09-21 08:52:50] [ERROR] Database connection error: Access denied for user ''@'localhost' (using password: NO)
+[2025-09-21 08:52:50] [WARN] Scheduling database reconnection attempt 1 in 5 seconds
+[2025-09-21 08:52:55] [ERROR] Database connection error: Access denied for user ''@'localhost' (using password: NO)
+[2025-09-21 08:52:55] [WARN] Scheduling database reconnection attempt 2 in 5 seconds
+[2025-09-21 08:52:55] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:00] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:00] [ERROR] Database connection error: Access denied for user ''@'localhost' (using password: NO)
+[2025-09-21 08:53:00] [WARN] Scheduling database reconnection attempt 3 in 5 seconds
+[2025-09-21 08:53:05] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:05] [ERROR] Database connection error: Access denied for user ''@'localhost' (using password: NO)
+[2025-09-21 08:53:05] [WARN] Scheduling database reconnection attempt 4 in 5 seconds
+[2025-09-21 08:53:10] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:10] [ERROR] Database connection error: Access denied for user ''@'localhost' (using password: NO)
+[2025-09-21 08:53:10] [WARN] Scheduling database reconnection attempt 5 in 5 seconds
+[2025-09-21 08:53:15] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:15] [ERROR] Database connection error: Access denied for user ''@'localhost' (using password: NO)
+[2025-09-21 08:53:15] [CRITICAL] Max reconnection attempts reached. Server needs manual intervention.
+[2025-09-21 08:53:15] [INFO] Broadcast complete - Sent: 0, Failed: 0
+[2025-09-21 08:53:20] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:25] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:30] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:35] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:40] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:45] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:50] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:53:55] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:54:00] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:54:06] [ERROR] Database connection not available for checking new orders
+[2025-09-21 08:57:16] [INFO] Database connection established successfully

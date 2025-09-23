@@ -26,25 +26,20 @@ try {
 
     // Check if preferences exist
     $stmt = $conn->prepare("SELECT id FROM user_preferences WHERE user_id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->execute([$userId]);
+    $result = $stmt->fetch();
 
     if ($result->num_rows > 0) {
         // Update existing preferences
         $stmt = $conn->prepare("UPDATE user_preferences SET language = ?, notifications = ? WHERE user_id = ?");
-        $stmt->bind_param("ssi", $language, $notifications, $userId);
+        $stmt->execute([$language, $notifications, $userId]);
     } else {
         // Insert new preferences
         $stmt = $conn->prepare("INSERT INTO user_preferences (user_id, language, notifications) VALUES (?, ?, ?)");
-        $stmt->bind_param("iss", $userId, $language, $notifications);
+        $stmt->execute([$userId, $language, $notifications]);
     }
 
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
-    } else {
-        throw new Exception('Failed to update preferences');
-    }
+    echo json_encode(['success' => true]);
 
 } catch (Exception $e) {
     http_response_code(500);

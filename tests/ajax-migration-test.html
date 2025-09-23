@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>K-Food Delights AJAX Migration Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .test-section {
+        margin-bottom: 30px;
+      }
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+      }
+      .success {
+        background-color: #e7f6e7;
+        border-color: #c3e6c3;
+      }
+      .failure {
+        background-color: #fbe7e7;
+        border-color: #e6c3c3;
+      }
+      .pending {
+        background-color: #fff7e7;
+        border-color: #e6d9c3;
+      }
+      button {
+        margin: 5px;
+        padding: 5px 10px;
+      }
+      #progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #4caf50;
+        width: 0;
+        transition: width 0.3s;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="progress"></div>
+    <h1>K-Food Delights AJAX Migration Test</h1>
+    <p>This page tests the new AJAX-based real-time updates implementation.</p>
+
+    <div class="test-section">
+      <h2>1. Order Status Updates</h2>
+      <button onclick="testOrderStatus()">Test Order Status Polling</button>
+      <div id="orderStatusResults" class="test-result pending">
+        Waiting to start test...
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Kitchen Status Updates</h2>
+      <button onclick="testKitchenStatus()">Test Kitchen Updates</button>
+      <div id="kitchenStatusResults" class="test-result pending">
+        Waiting to start test...
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. System Metrics Updates</h2>
+      <button onclick="testSystemMetrics()">Test System Metrics</button>
+      <div id="systemMetricsResults" class="test-result pending">
+        Waiting to start test...
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>4. Error Handling</h2>
+      <button onclick="testErrorHandling()">Test Error Handling</button>
+      <div id="errorHandlingResults" class="test-result pending">
+        Waiting to start test...
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>5. Rate Limiting</h2>
+      <button onclick="testRateLimiting()">Test Rate Limiting</button>
+      <div id="rateLimitingResults" class="test-result pending">
+        Waiting to start test...
+      </div>
+    </div>
+
+    <script>
+      // Test utilities
+      function updateResult(elementId, message, success = true) {
+        const element = document.getElementById(elementId);
+        element.textContent = message;
+        element.className = `test-result ${success ? "success" : "failure"}`;
+        updateProgress();
+      }
+
+      function updateProgress() {
+        const total = document.querySelectorAll(".test-result").length;
+        const completed = document.querySelectorAll(
+          ".test-result:not(.pending)"
+        ).length;
+        const progress = (completed / total) * 100;
+        document.getElementById("progress").style.width = `${progress}%`;
+      }
+
+      // Test implementations
+      async function testOrderStatus() {
+        try {
+          const orderHandler = new OrderStatusHandler({
+            onSuccess: (data) => {
+              if (data && data.status) {
+                updateResult(
+                  "orderStatusResults",
+                  `Success: Order status polling working. Status: ${data.status}`
+                );
+              } else {
+                throw new Error("Invalid response format");
+              }
+            },
+            onError: (error) => {
+              throw error;
+            },
+          });
+
+          orderHandler.startPolling();
+
+          // Stop polling after 10 seconds
+          setTimeout(() => {
+            orderHandler.stopPolling();
+          }, 10000);
+        } catch (error) {
+          updateResult("orderStatusResults", `Failed: ${error.message}`, false);
+        }
+      }
+
+      async function testKitchenStatus() {
+        try {
+          const kitchenHandler = new KitchenStatusHandler({
+            onSuccess: (data) => {
+              if (data && data.orders) {
+                updateResult(
+                  "kitchenStatusResults",
+                  `Success: Kitchen updates working. Active orders: ${data.orders.length}`
+                );
+              } else {
+                throw new Error("Invalid response format");
+              }
+            },
+            onError: (error) => {
+              throw error;
+            },
+          });
+
+          kitchenHandler.startPolling();
+
+          // Stop polling after 10 seconds
+          setTimeout(() => {
+            kitchenHandler.stopPolling();
+          }, 10000);
+        } catch (error) {
+          updateResult(
+            "kitchenStatusResults",
+            `Failed: ${error.message}`,
+            false
+          );
+        }
+      }
+
+      async function testSystemMetrics() {
+        try {
+          const metricsHandler = new AdminMetricsHandler({
+            onSuccess: (data) => {
+              if (data && data.metrics) {
+                updateResult(
+                  "systemMetricsResults",
+                  `Success: System metrics working. Last update: ${data.timestamp}`
+                );
+              } else {
+                throw new Error("Invalid response format");
+              }
+            },
+            onError: (error) => {
+              throw error;
+            },
+          });
+
+          metricsHandler.startPolling();
+
+          // Stop polling after 30 seconds
+          setTimeout(() => {
+            metricsHandler.stopPolling();
+          }, 30000);
+        } catch (error) {
+          updateResult(
+            "systemMetricsResults",
+            `Failed: ${error.message}`,
+            false
+          );
+        }
+      }
+
+      async function testErrorHandling() {
+        try {
+          // Test with invalid endpoint
+          const handler = new AjaxHandler({
+            endpoint: "/api/non_existent_endpoint.php",
+            interval: 1000,
+            onSuccess: () => {},
+            onError: (error) => {
+              if (error.message.includes("404")) {
+                updateResult(
+                  "errorHandlingResults",
+                  "Success: Error handling working correctly"
+                );
+                handler.stopPolling();
+              }
+            },
+          });
+
+          handler.startPolling();
+
+          // Stop test after 5 seconds if no error
+          setTimeout(() => {
+            handler.stopPolling();
+            updateResult(
+              "errorHandlingResults",
+              "Failed: Error handling not triggered",
+              false
+            );
+          }, 5000);
+        } catch (error) {
+          updateResult(
+            "errorHandlingResults",
+            `Failed: ${error.message}`,
+            false
+          );
+        }
+      }
+
+      async function testRateLimiting() {
+        try {
+          let requests = 0;
+          let failures = 0;
+          const startTime = Date.now();
+
+          // Try to exceed rate limit (60 requests per minute)
+          for (let i = 0; i < 70; i++) {
+            try {
+              const response = await fetch("/api/order_status.php");
+              if (response.ok) {
+                requests++;
+              } else if (response.status === 429) {
+                failures++;
+              }
+            } catch (error) {
+              failures++;
+            }
+          }
+
+          const timeElapsed = (Date.now() - startTime) / 1000;
+
+          updateResult(
+            "rateLimitingResults",
+            `Success: Rate limiting working. ${requests} successful requests, ` +
+              `${failures} rate-limited in ${timeElapsed.toFixed(1)}s`
+          );
+        } catch (error) {
+          updateResult(
+            "rateLimitingResults",
+            `Failed: ${error.message}`,
+            false
+          );
+        }
+      }
+    </script>
+
+    <script src="/js/ajax-handler.js"></script>
+  </body>
+</html>

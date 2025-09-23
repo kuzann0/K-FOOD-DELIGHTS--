@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Order System Test</title>
+    <meta name="csrf-token" content="test-token" />
+  </head>
+  <body>
+    <h1>Order System Test</h1>
+    <div id="results"></div>
+
+    <script>
+      function log(message, isError = false) {
+        const results = document.getElementById("results");
+        const div = document.createElement("div");
+        div.style.color = isError ? "red" : "green";
+        div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+        results.appendChild(div);
+      }
+
+      async function testOrderSystem() {
+        try {
+          // Test order placement
+          const orderData = {
+            customerInfo: {
+              fullName: "Test Customer",
+              email: "test@example.com",
+              phone: "1234567890",
+              address: "123 Test St",
+              deliveryInstructions: "Test delivery note",
+            },
+            payment: {
+              method: "cash",
+            },
+            cartItems: [
+              {
+                name: "Test Item",
+                price: 100.0,
+                quantity: 1,
+              },
+            ],
+            amounts: {
+              total: 100.0,
+            },
+          };
+
+          // Submit order
+          log("Submitting test order...");
+          const orderResponse = await fetch(
+            "/capstone/k_food_customer/process_order.php",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": document.querySelector(
+                  'meta[name="csrf-token"]'
+                ).content,
+              },
+              body: JSON.stringify(orderData),
+            }
+          );
+
+          const orderResult = await orderResponse.json();
+          if (orderResult.success) {
+            log(`Order placed successfully. Order ID: ${orderResult.orderId}`);
+          } else {
+            throw new Error(`Order placement failed: ${orderResult.message}`);
+          }
+
+          // Wait 2 seconds
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // Check crew dashboard
+          log("Checking crew dashboard...");
+          const crewResponse = await fetch("/kfood_crew/api/fetch_orders.php");
+          const crewResult = await crewResponse.json();
+
+          if (crewResult.success) {
+            const orders = crewResult.orders;
+            const foundOrder = orders.find(
+              (o) => o.orderId === orderResult.orderId
+            );
+
+            if (foundOrder) {
+              log(
+                `Order found in crew dashboard: ${JSON.stringify(foundOrder)}`
+              );
+            } else {
+              throw new Error("Order not found in crew dashboard");
+            }
+          } else {
+            throw new Error(
+              `Failed to fetch crew dashboard: ${crewResult.message}`
+            );
+          }
+
+          log("All tests completed successfully!");
+        } catch (error) {
+          log(`Test failed: ${error.message}`, true);
+          console.error("Test error:", error);
+        }
+      }
+
+      // Run tests when page loads
+      window.addEventListener("load", testOrderSystem);
+    </script>
+  </body>
+</html>

@@ -8,6 +8,26 @@ include 'config.php';
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+
+// Generate WebSocket auth token
+if (empty($_SESSION['ws_token'])) {
+    $_SESSION['ws_token'] = bin2hex(random_bytes(32));
+}
+
+// WebSocket Configuration
+$wsConfig = [
+    'port' => 8080,
+    'host' => '127.0.0.1',
+    'path' => '/ws',
+    'token' => $_SESSION['ws_token']
+];
+
+// Pass WebSocket config to JavaScript
+echo "<script>
+    window.WS_CONFIG = " . json_encode($wsConfig) . ";
+    window.WS_AUTH_TOKEN = '" . $_SESSION['ws_token'] . "';
+</script>";
+
 // Maps integration temporarily removed
 // include 'includes/maps_config.php';
 
@@ -65,6 +85,15 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
 <head>
     <!-- Map handler for confirmLocation() -->
     <script src="js/map-handler.js"></script>
+    <script>
+        // Debug logging
+        console.log('Checkout page loaded');
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content loaded');
+            console.log('WebSocket Config:', window.WS_CONFIG);
+            console.log('Auth Token:', window.WS_AUTH_TOKEN);
+        });
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
@@ -76,6 +105,44 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
     <link rel="stylesheet" href="css/payment.css">
     <link rel="stylesheet" href="css/notifications.css">
     <link rel="stylesheet" href="css/order-confirmation-modal.css">
+    <style>
+        /* Form validation styles */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        .form-group input.invalid,
+        .form-group textarea.invalid {
+            border-color: #dc3545;
+            background-color: #fff8f8;
+        }
+
+        .form-group input.invalid:focus,
+        .form-group textarea.invalid:focus {
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
         }
         <style>
@@ -314,6 +381,39 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
             transform: translateY(-1px);
         }
 
+        /* Confirmation Dialog Styles */
+        .confirmation-dialog {
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .confirmation-dialog .modal-body {
+            padding: 2rem;
+        }
+
+        .amount-confirmation {
+            margin: 1.5rem 0;
+            font-size: 1.2rem;
+            color: #ff6b6b;
+        }
+
+        .confirmation-message {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff9f9;
+            border-radius: 8px;
+            text-align: center;
+            color: #666;
+        }
+
+        .final-total {
+            font-size: 1.25rem;
+            color: #ff6b6b;
+            border-top: 2px solid #ffe9e9;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
         .item-row, .total-row {
             display: flex;
             justify-content: space-between;
@@ -510,6 +610,152 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         .confirmation-modal.active .confirmation-modal-content {
             transform: translateY(0);
             opacity: 1;
+        }
+
+        /* Success Modal Styles */
+        .success-modal {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 1rem;
+            animation: scaleIn 0.5s ease;
+        }
+
+        .success-modal h2 {
+            color: #333;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-modal p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .success-modal .order-number {
+            font-weight: bold;
+            color: #ff6666;
+        }
+
+        .view-order-btn {
+            background: linear-gradient(135deg, #ff6666, #ff8c66);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-order-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 102, 102, 0.2);
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease-out;
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .success-modal {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 1.5rem;
+            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .success-modal h2 {
+            color: #333;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-modal p {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .order-number {
+            font-size: 1.2rem;
+            color: #ff6666;
+            font-weight: 600;
+            margin: 1rem 0;
+        }
+
+        .view-order-btn {
+            background: linear-gradient(135deg, #ff6666, #ff8c66);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 102, 102, 0.2);
+        }
+
+        .view-order-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 102, 102, 0.3);
         }
 
         .confirmation-modal h2 {
@@ -1312,21 +1558,43 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
     <div class="checkout-container">
         <div class="checkout-form">
             <form id="checkoutForm" method="POST" action="process_order.php" autocomplete="off">
-                <!-- Hidden userId for WebSocket authentication -->
+                <!-- Hidden userId for AJAX authentication -->
                 <input type="hidden" id="userId" name="userId" value="<?php echo htmlspecialchars($userId); ?>">
+                <!-- Hidden cart data for order processing -->
+                <input type="hidden" id="cart-data" name="cartData" value="<?php echo htmlspecialchars(isset($_SESSION['cart']) ? json_encode($_SESSION['cart']) : '[]'); ?>">
                 <div class="form-section">
                     <h2>Billing Information</h2>
                     <div class="form-group">
-                        <label for="fullName">Full Name</label>
-                        <input type="text" id="fullName" name="fullName" value="<?php echo htmlspecialchars($fullName); ?>" readonly>
+                        <label for="customerName">Full Name</label>
+                        <input type="text" 
+                               id="customerName" 
+                               name="customerName" 
+                               value="<?php echo htmlspecialchars($fullName); ?>" 
+                               required 
+                               readonly>
+                        <div class="error-message" id="customerNameError"></div>
                     </div>
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($userInfo['email']); ?>" readonly>
+                        <input type="email" 
+                               id="email" 
+                               name="email" 
+                               value="<?php echo htmlspecialchars($userInfo['email']); ?>" 
+                               required 
+                               readonly>
+                        <div class="error-message" id="emailError"></div>
                     </div>
                     <div class="form-group">
                         <label for="phone">Phone Number</label>
-                        <input type="tel" id="phone" name="phone" value="<?php echo htmlspecialchars($userInfo['phone']); ?>" readonly>
+                        <input type="tel" 
+                               id="phone" 
+                               name="phone" 
+                               value="<?php echo htmlspecialchars($userInfo['phone']); ?>" 
+                               pattern="[0-9]{11}" 
+                               title="Please enter a valid 11-digit phone number"
+                               required 
+                               readonly>
+                        <div class="error-message" id="phoneError"></div>
                     </div>
                 </div>
 
@@ -1343,14 +1611,14 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                             </div>
                             <div class="map-wrapper">
                                 <div class="map-controls">
-                                    <button type="button" class="map-control-btn active" data-map-type="roadmap" title="Street Map">
-                                        <i class="fas fa-map"></i>
+                                    <button type="button" class="map-control-btn active" data-map-type="roadmap" title="Street Map" aria-label="Switch to street map view">
+                                        <i class="fas fa-map" aria-hidden="true"></i>
                                     </button>
-                                    <button type="button" class="map-control-btn" data-map-type="satellite" title="Satellite View">
-                                        <i class="fas fa-satellite"></i>
+                                    <button type="button" class="map-control-btn" data-map-type="satellite" title="Satellite View" aria-label="Switch to satellite view">
+                                        <i class="fas fa-satellite" aria-hidden="true"></i>
                                     </button>
-                                    <button type="button" class="map-control-btn" onclick="getCurrentLocation()" title="Use Current Location">
-                                        <i class="fas fa-location-crosshairs"></i>
+                                    <button type="button" class="map-control-btn" onclick="getCurrentLocation()" title="Use Current Location" aria-label="Use your current location">
+                                        <i class="fas fa-location-crosshairs" aria-hidden="true"></i>
                                     </button>
                                 </div>
                                 <div id="map"></div>
@@ -1371,14 +1639,25 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                                 </button>
                             </div>
                         </div>
-                        <input type="hidden" id="address" name="address" value="<?php echo htmlspecialchars($userInfo['address']); ?>">
+                        <label for="address" class="sr-only">Delivery Address</label>
+                        <input type="text" 
+                               id="address" 
+                               name="address" 
+                               value="<?php echo htmlspecialchars($userInfo['address']); ?>"
+                               required
+                               readonly
+                               aria-label="Selected delivery address">
+                        <div class="error-message" id="addressError"></div>
                         <input type="hidden" id="latitude" name="latitude" value="">
                         <input type="hidden" id="longitude" name="longitude" value="">
                     </div>
                     <div class="form-group">
                         <label for="deliveryInstructions">Delivery Instructions (Optional)</label>
-                        <textarea id="deliveryInstructions" name="deliveryInstructions" rows="3" 
-                            placeholder="Add any special instructions for delivery (e.g., landmarks, gate codes, preferred entrance)"></textarea>
+                        <textarea id="deliveryInstructions" 
+                                name="deliveryInstructions" 
+                                rows="3" 
+                                placeholder="Add any special instructions for delivery (e.g., landmarks, gate codes, preferred entrance)"></textarea>
+                        <div class="error-message" id="instructionsError"></div>
                     </div>
                 </div>
 
@@ -1403,7 +1682,12 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                         <img src="../resources/images/gcash-qr.png" alt="GCash QR Code" class="qr-code">
                         <div class="form-group">
                             <label for="gcashReference">GCash Reference Number</label>
-                            <input type="text" id="gcashReference" name="gcashReference">
+                            <label for="gcashReference">GCash Reference Number</label>
+                            <input type="text" 
+                                   id="gcashReference" 
+                                   name="gcashReference"
+                                   placeholder="Enter your GCash reference number"
+                                   aria-label="GCash reference number">
                         </div>
                     </div>
                 </div>
@@ -1432,7 +1716,12 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                 <div class="form-group">
                     <label for="promoCode">Promo Code</label>
                     <div class="promo-input">
-                        <input type="text" id="promoCode" name="promoCode" placeholder="Enter promo code">
+                        <label for="promoCode" class="sr-only">Promo Code</label>
+                        <input type="text" 
+                               id="promoCode" 
+                               name="promoCode" 
+                               placeholder="Enter promo code"
+                               aria-label="Enter promo code">
                         <button type="button" class="apply-promo-btn" onclick="applyPromoCode()">Apply</button>
                     </div>
                     <div class="promo-applied">
@@ -1447,7 +1736,12 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                             <span class="checkbox-text">Senior Citizen Discount (20% off)</span>
                         </label>
                         <div class="id-input" id="seniorIdInput" style="display: none;">
-                            <input type="text" id="seniorId" name="seniorId" placeholder="Enter Senior Citizen ID">
+                            <label for="seniorId" class="sr-only">Senior Citizen ID</label>
+                            <input type="text" 
+                                   id="seniorId" 
+                                   name="seniorId" 
+                                   placeholder="Enter Senior Citizen ID"
+                                   aria-label="Senior Citizen ID number">
                         </div>
                     </div>
 
@@ -1457,7 +1751,12 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                             <span class="checkbox-text">PWD Discount (15% off)</span>
                         </label>
                         <div class="id-input" id="pwdIdInput" style="display: none;">
-                            <input type="text" id="pwdId" name="pwdId" placeholder="Enter PWD ID">
+                            <label for="pwdId" class="sr-only">PWD ID</label>
+                            <input type="text" 
+                                   id="pwdId" 
+                                   name="pwdId" 
+                                   placeholder="Enter PWD ID"
+                                   aria-label="PWD (Person with Disability) ID number">
                         </div>
                     </div>
                 </div>
@@ -1466,10 +1765,6 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                 <div class="total-row">
                     <span>Subtotal</span>
                     <span id="subtotal">₱0.00</span>
-                </div>
-                <div class="total-row">
-                    <span>Delivery Fee</span>
-                    <span id="deliveryFee">₱50.00</span>
                 </div>
                 <div class="total-row discount-row" style="display: none;">
                     <span>Promo Discount</span>
@@ -1497,8 +1792,8 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-utensils"></i> Confirm Your Order</h2>
-                <button type="button" class="modal-close" onclick="OrderConfirmationHandler.close()">
-                    <i class="fas fa-times"></i>
+                <button type="button" class="modal-close" onclick="OrderConfirmationHandler.close()" aria-label="Close order confirmation modal">
+                    <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
             <div class="modal-body">
@@ -1542,9 +1837,6 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                             <span class="total-value">₱<span id="modalSubtotal"></span></span>
                         </div>
                         <div class="total-row">
-                            <span class="total-label">Delivery Fee:</span>
-                            <span class="total-value">₱<span id="modalDeliveryFee"></span></span>
-                        </div>
                         <div class="total-row" id="modalDiscountRow" style="display: none;">
                             <span class="total-label">Discounts:</span>
                             <span class="total-value" style="color: #2ecc71">-₱<span id="modalDiscounts"></span></span>
@@ -1638,25 +1930,90 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
 
     // Cart manager for handling cart operations
     class CartManager {
-        // Add init method to avoid TypeError when cartManager.init() is called
-        init() {
-            // Optionally, update display or perform any setup
-            this.updateDisplay();
-        }
         constructor() {
             this.items = this.loadCart();
         }
 
+        init() {
+            this.updateDisplay();
+            this.updateCartData();
+        }
+
+        updateCartData() {
+            // Update hidden input with current cart data
+            const cartInput = document.getElementById('cart-data');
+            if (cartInput && Array.isArray(this.items)) {
+                // Validate and normalize cart items
+                const validItems = this.items.map(item => ({
+                    product_id: item.product_id || item.id,
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    quantity: parseInt(item.quantity) || 0,
+                    image: item.image
+                })).filter(item => 
+                    item.product_id && 
+                    item.quantity > 0 && 
+                    item.price > 0
+                );
+                cartInput.value = JSON.stringify(validItems);
+                this.items = validItems; // Update the items array with validated data
+            }
+        }
+
         loadCart() {
             try {
-                return JSON.parse(localStorage.getItem('cart') || '[]');
+                const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
+                // Ensure each item has required fields
+                return cartData.map(item => ({
+                    product_id: item.product_id || item.id, // Maintain backward compatibility
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    quantity: parseInt(item.quantity) || 0,
+                    image: item.image
+                })).filter(item => 
+                    item.product_id && 
+                    item.quantity > 0 && 
+                    item.price > 0
+                );
             } catch (e) {
                 console.error('Failed to load cart:', e);
                 return [];
             }
         }
 
+        createHiddenInput() {
+            // Create hidden input if it doesn't exist
+            let cartInput = document.getElementById('cart-data');
+            if (!cartInput) {
+                cartInput = document.createElement('input');
+                cartInput.type = 'hidden';
+                cartInput.id = 'cart-data';
+                document.getElementById('checkoutForm')?.appendChild(cartInput);
+            }
+            this.updateHiddenInput();
+        }
+
+        updateHiddenInput() {
+            const cartInput = document.getElementById('cart-data');
+            if (cartInput && Array.isArray(this.items)) {
+                // Ensure each item has the required fields
+                const validatedItems = this.items.map(item => ({
+                    product_id: item.product_id || item.id, // Support both formats
+                    name: item.name,
+                    price: item.price,
+                    quantity: parseInt(item.quantity) || 0,
+                    image: item.image
+                })).filter(item => 
+                    item.product_id && 
+                    item.quantity > 0 && 
+                    typeof item.price === 'number'
+                );
+                cartInput.value = JSON.stringify(validatedItems);
+            }
+        }
+
         updateDisplay() {
+            this.updateHiddenInput();
             const orderItems = document.getElementById('orderItems');
             if (!orderItems) return;
 
@@ -1685,7 +2042,7 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         updateTotals(subtotal) {
             const elements = {
                 subtotal: document.getElementById('subtotal'),
-                deliveryFee: document.getElementById('deliveryFee'),
+
                 totalAmount: document.getElementById('totalAmount')
             };
 
@@ -1693,8 +2050,7 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                 elements.subtotal.textContent = `₱${subtotal.toFixed(2)}`;
             }
 
-            const deliveryFee = 50;
-            const total = subtotal + deliveryFee;
+            const total = subtotal;
 
             if (elements.totalAmount) {
                 elements.totalAmount.textContent = `₱${total.toFixed(2)}`;
@@ -1709,6 +2065,7 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         clearCart() {
             localStorage.removeItem('cart');
             this.items = [];
+            this.updateHiddenInput();
             this.updateDisplay();
         }
     }
@@ -1750,8 +2107,7 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
             discountElement.parentElement.style.display = discount > 0 ? 'flex' : 'none';
         }
         
-        const deliveryFee = 50;
-        const total = subtotal + deliveryFee - discount;
+        const total = subtotal - discount;
         
         const totalElement = document.getElementById('totalAmount');
         if (totalElement) {
@@ -1801,24 +2157,56 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         notificationManager.show('Delivery address selection is temporarily disabled. Using default address.', NotificationType.INFO);
     });
 </script>
-    <!-- Order logic scripts -->
-    <!-- WebSocket Configuration -->
-    <script src="js/websocket-config.js"></script>
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content success-modal">
+            <div class="modal-header">
+                <h2>Order Placed Successfully!</h2>
+                <button type="button" class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p>Your order has been confirmed and is being processed.</p>
+                <p class="order-number"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="view-order-btn">View Order Status</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Initialize global variables -->
+    <script>
+        window.userId = <?php echo json_encode($userId); ?>;
+    </script>
     
+    <!-- Order logic scripts -->
     <!-- Core Libraries -->
     <script src="js/order-amount-handler.js"></script>
-    <script src="js/checkout-validation.js"></script>
     
-    <!-- WebSocket and Order Handling -->
-    <script src="js/websocket-handler.js"></script>
+    <!-- Form Validation -->
+    <script src="js/checkout-form-validator.js"></script>
+    
+    <!-- Order Handling -->
+    <script src="js/ajax-handler.js"></script>
+    <script src="js/order-ajax-handler.js"></script>
     <script src="js/order-confirmation-handler.js"></script>
+    <script src="js/order-success-handler.js"></script>
     <script src="js/order-submission.js"></script>
 <script>
     // Initialize handlers after DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         // Initialize order confirmation handler
-        if (typeof OrderConfirmationHandler === 'undefined') {
-            console.error('OrderConfirmationHandler not loaded. Check script dependencies.');
+        try {
+            window.orderConfirmationHandler = OrderConfirmationHandler.init();
+        } catch (error) {
+            console.error('Failed to initialize OrderConfirmationHandler:', error);
+            notificationManager.show('System initialization failed. Please refresh the page.', NotificationType.ERROR);
             return;
         }
 
@@ -1835,16 +2223,46 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
                     }
 
                     // Get order data
+                    // Calculate subtotal from cart items
+                    const subtotal = cartManager.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const total = subtotal;
+
+                    // Validate required fields first
+                    const requiredFields = {
+                        customerName: document.getElementById('customerName'),
+                        phone: document.getElementById('phone'),
+                        address: document.getElementById('address')
+                    };
+
+                    // Check if all required fields exist and have values
+                    for (const [field, element] of Object.entries(requiredFields)) {
+                        if (!element || !element.value) {
+                            throw new Error(`${field} is required`);
+                        }
+                    }
+
                     const orderData = {
-                        items: cartManager.items,
-                        total: parseFloat(document.getElementById('totalAmount').textContent.replace('₱', '')),
-                        customerId: document.getElementById('userId').value,
-                        customerName: document.getElementById('fullName').value,
-                        phone: document.getElementById('phone').value,
-                        address: document.getElementById('address').value,
-                        instructions: document.getElementById('deliveryInstructions').value,
+                        items: cartManager.items.map(item => ({
+                            name: item.name || '',
+                            quantity: parseInt(item.quantity) || 0,
+                            price: parseFloat(item.price) || 0,
+                            product_id: item.product_id
+                        })).filter(item => 
+                            item.quantity > 0 && 
+                            item.price > 0 && 
+                            item.product_id
+                        ),
+                        customerName: requiredFields.customerName.value,
+                        phone: requiredFields.phone.value,
+                        address: requiredFields.address.value,
+                        instructions: document.getElementById('deliveryInstructions')?.value || '',
+                        customerId: document.getElementById('userId')?.value,
                         paymentMethod: document.querySelector('input[name="paymentMethod"]:checked')?.value,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        amounts: {
+                            subtotal: parseFloat(subtotal.toFixed(2)),
+                            total: parseFloat(total.toFixed(2))
+                        }
                     };
 
                     // Show confirmation modal with order details
@@ -1861,10 +2279,11 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         notificationManager.init();
 
         // Initialize order confirmation handler (handles modal and order submission)
-        if (typeof OrderConfirmationHandler !== 'undefined') {
-            OrderConfirmationHandler.init();
-        } else {
-            console.error('OrderConfirmationHandler not found. Please check script loading.');
+        try {
+            window.orderConfirmationHandler = OrderConfirmationHandler.init();
+        } catch (error) {
+            console.error('Failed to initialize OrderConfirmationHandler:', error);
+            notificationManager.show('System initialization failed. Please refresh the page.', NotificationType.ERROR);
         }
 
         // Initialize amount handling
@@ -1876,38 +2295,6 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         document.addEventListener('cartUpdated', (e) => {
             const updatedAmounts = recalculateAmounts(e.detail.items);
             updateOrderSummary(updatedAmounts);
-        });
-
-        // Listen for place order clicks
-        document.getElementById('placeOrderBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Gather all required fields and validate
-            const checkoutForm = document.getElementById('checkoutForm');
-            if (!checkoutForm) return;
-
-            // Payment method validation: ensure a radio is selected
-            const paymentMethodInput = checkoutForm.querySelector('input[name="paymentMethod"]:checked');
-            const paymentMethod = paymentMethodInput ? paymentMethodInput.value : null;
-            if (!paymentMethod) {
-                notificationManager.show('Please select a payment method.', NotificationType.ERROR);
-                // Optionally, highlight the payment section
-                document.querySelector('.payment-methods').style.boxShadow = '0 0 0 2px #ff6b6b';
-                setTimeout(() => {
-                    document.querySelector('.payment-methods').style.boxShadow = '';
-                }, 1500);
-                return;
-            }
-
-            // Prepare order data
-            const orderData = prepareOrderData();
-            orderData.payment = orderData.payment || {};
-            orderData.payment.method = paymentMethod;
-
-            // Validate required fields (landmark, instructions, etc. as needed)
-            // ...additional validation can be added here...
-
-            // Show confirmation modal
-            OrderConfirmationHandler.show(orderData);
         });
     });
 </script>
@@ -1963,7 +2350,7 @@ $fullName = $userInfo['first_name'] . ' ' . $userInfo['last_name'];
         }
     });
 
-    // WebSocket handling is managed by order-confirmation-handler.js
+    // Order status updates are handled by order-confirmation-handler.js via AJAX
     // This ensures real-time updates for order status and crew dashboard
 
     // Promo code handling

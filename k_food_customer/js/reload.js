@@ -5,15 +5,20 @@
   let retryCount = 0;
   let ws = null;
 
+  // WebSocket configuration
+  const WS_PORT = "8080"; // WebSocket server port
+  const WS_PATH = "/ws"; // WebSocket endpoint path
+
   function connect() {
     if (isConnected || retryCount >= MAX_RETRIES) return;
 
     try {
-      // Use proper WebSocket URL format with single forward slash
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = "127.0.0.1:5500";
-      // Fix: Remove double slashes and ensure correct WebSocket URL format
-      ws = new WebSocket(`${protocol}//${host}/ws`);
+      const host = "127.0.0.1";
+      const wsUrl = `${protocol}//${host}:${WS_PORT}${WS_PATH}`;
+
+      console.log("Connecting to WebSocket server at:", wsUrl);
+      ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log("Development server connected");

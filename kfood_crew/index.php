@@ -178,7 +178,7 @@ $pageTitle = "Crew Dashboard";
     <div id="notification-container"></div>
 
     <!-- Scripts -->
-    <!-- WebSocket Configuration -->
+    <!-- AJAX Polling Configuration -->
     <script src="../k_food_customer/js/websocket-config.js"></script>
     
     <!-- Core Libraries -->

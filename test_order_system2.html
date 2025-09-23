@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Order System Test</title>
+  </head>
+  <body>
+    <h1>Order System Test</h1>
+    <div id="results"></div>
+
+    <script>
+      function log(message, isError = false) {
+        const results = document.getElementById("results");
+        const div = document.createElement("div");
+        div.style.color = isError ? "red" : "green";
+        div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+        results.appendChild(div);
+        console.log(message);
+      }
+
+      async function testOrderSystem() {
+        try {
+          const orderData = {
+            customerInfo: {
+              fullName: "Test Customer",
+              email: "test@example.com",
+              phone: "1234567890",
+              address: "123 Test St",
+              deliveryInstructions: "Test delivery note",
+            },
+            payment: {
+              method: "cash",
+            },
+            cartItems: [
+              {
+                name: "Test Item",
+                price: 100.0,
+                quantity: 1,
+              },
+            ],
+            amounts: {
+              subtotal: 100.0,
+              deliveryFee: 50.0,
+              total: 150.0,
+            },
+          };
+
+          // Submit order
+          log("Submitting test order...");
+          log("Request data: " + JSON.stringify(orderData));
+
+          const orderResponse = await fetch(
+            "/capstone/k_food_customer/process_order.php",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(orderData),
+            }
+          );
+
+          let responseText;
+          try {
+            responseText = await orderResponse.text();
+            log("Raw response: " + responseText);
+          } catch (e) {
+            throw new Error("Failed to get response text: " + e.message);
+          }
+
+          if (!orderResponse.ok) {
+            throw new Error(
+              `HTTP error! status: ${orderResponse.status}, response: ${responseText}`
+            );
+          }
+
+          let orderResult;
+          try {
+            orderResult = JSON.parse(responseText);
+          } catch (e) {
+            throw new Error(`Failed to parse JSON response: ${responseText}`);
+          }
+
+          if (orderResult.success) {
+            log(`Order placed successfully. Order ID: ${orderResult.orderId}`);
+          } else {
+            throw new Error(`Order placement failed: ${orderResult.message}`);
+          }
+
+          // Wait 2 seconds
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // Check crew dashboard
+          log("Checking crew dashboard...");
+          const crewResponse = await fetch(
+            "/capstone/kfood_crew/api/fetch_orders.php"
+          );
+
+          let crewResponseText;
+          try {
+            crewResponseText = await crewResponse.text();
+            log("Raw crew response: " + crewResponseText);
+          } catch (e) {
+            throw new Error("Failed to get crew response text: " + e.message);
+          }
+
+          if (!crewResponse.ok) {
+            throw new Error(
+              `HTTP error! status: ${crewResponse.status}, response: ${crewResponseText}`
+            );
+          }
+
+          let crewResult;
+          try {
+            crewResult = JSON.parse(crewResponseText);
+          } catch (e) {
+            throw new Error(
+              `Failed to parse crew JSON response: ${crewResponseText}`
+            );
+          }
+
+          if (crewResult.success) {
+            const orders = crewResult.orders;
+            const foundOrder = orders.find(
+              (o) => o.orderId === orderResult.orderId
+            );
+
+            if (foundOrder) {
+              log(
+                `Order found in crew dashboard: ${JSON.stringify(foundOrder)}`
+              );
+            } else {
+              throw new Error("Order not found in crew dashboard");
+            }
+          } else {
+            throw new Error(
+              `Failed to fetch crew dashboard: ${crewResult.message}`
+            );
+          }
+
+          log("All tests completed successfully!");
+        } catch (error) {
+          log(`Test failed: ${error.message}`, true);
+          console.error("Test error:", error);
+        }
+      }
+
+      // Run tests when page loads
+      window.addEventListener("load", testOrderSystem);
+    </script>
+  </body>
+</html>

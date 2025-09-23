@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Order Process Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .result {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>K-Food Delights Order Process Test</h2>
+    <div id="results"></div>
+
+    <script>
+      async function runTest() {
+        const results = document.getElementById("results");
+
+        // Test order data
+        const orderData = {
+          customer: {
+            name: "Test Customer",
+            email: "test@example.com",
+            phone: "1234567890",
+            address: "123 Test St",
+          },
+          order: {
+            items: [
+              {
+                name: "Test Item",
+                quantity: 2,
+                price: 100.0,
+              },
+            ],
+            amounts: {
+              subtotal: 200.0,
+              deliveryFee: 50.0,
+              discount: 0.0,
+              total: 250.0,
+            },
+            payment: {
+              method: "cash",
+            },
+            instructions: "Test delivery instructions",
+          },
+        };
+
+        try {
+          // Step 1: Submit Order
+          logStep("1. Submitting order...");
+          const orderResponse = await fetch("/api/ajax/process_order.php", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+            body: JSON.stringify(orderData),
+          });
+
+          const orderResult = await orderResponse.json();
+          if (!orderResponse.ok) {
+            throw new Error(
+              orderResult.message ||
+                `HTTP error! status: ${orderResponse.status}`
+            );
+          }
+
+          logSuccess("Order submitted successfully!");
+          logData("Order Response:", orderResult);
+
+          // Step 2: Verify Order in Crew Dashboard
+          logStep("2. Checking crew dashboard for order...");
+          const dashboardResponse = await fetch("/api/ajax/fetch_orders.php", {
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          });
+
+          const dashboardResult = await dashboardResponse.json();
+          if (!dashboardResponse.ok) {
+            throw new Error(
+              dashboardResult.message ||
+                `HTTP error! status: ${dashboardResponse.status}`
+            );
+          }
+
+          // Check if our order is in the results
+          const ourOrder = dashboardResult.orders.find(
+            (order) =>
+              order.customer.name === orderData.customer.name &&
+              order.customer.email === orderData.customer.email
+          );
+
+          if (ourOrder) {
+            logSuccess("Order found in crew dashboard!");
+            logData("Order Details in Dashboard:", ourOrder);
+          } else {
+            logError("Order not found in crew dashboard!");
+          }
+
+          // Step 3: Verify Database Storage
+          logStep("3. Checking database storage...");
+          const dbResponse = await fetch("/api/ajax/check_latest_order.php", {
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          });
+
+          const dbResult = await dbResponse.json();
+          if (!dbResponse.ok) {
+            throw new Error(
+              dbResult.message || `HTTP error! status: ${dbResponse.status}`
+            );
+          }
+
+          if (dbResult.success && dbResult.order) {
+            logSuccess("Order found in database!");
+            logData("Database Record:", dbResult.order);
+
+            // Verify order details match
+            const dbOrder = dbResult.order;
+            const matches = {
+              customerName: dbOrder.customer.name === orderData.customer.name,
+              customerEmail:
+                dbOrder.customer.email === orderData.customer.email,
+              customerPhone:
+                dbOrder.customer.phone === orderData.customer.phone,
+              totalAmount:
+                Math.abs(dbOrder.totalAmount - orderData.order.amounts.total) <
+                0.01,
+            };
+
+            logData("Data Verification:", matches);
+
+            if (Object.values(matches).every((match) => match)) {
+              logSuccess("All order details match!");
+            } else {
+              logError("Some order details do not match!");
+            }
+          } else {
+            logError("Order not found in database!");
+          }
+
+          // Step 4: Test Crew Dashboard Update
+          logStep("4. Testing crew dashboard updates...");
+
+          // Wait 5 seconds to allow for polling
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          const crewResponse = await fetch(
+            "/kfood_crew/api/ajax/fetch_orders.php",
+            {
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+              },
+            }
+          );
+
+          const crewResult = await crewResponse.json();
+          if (!crewResponse.ok) {
+            throw new Error(
+              crewResult.message || `HTTP error! status: ${crewResponse.status}`
+            );
+          }
+
+          // Find our test order in the crew dashboard
+          const crewOrder = crewResult.orders.find(
+            (order) =>
+              order.customer.name === orderData.customer.name &&
+              order.customer.email === orderData.customer.email &&
+              Math.abs(order.totalAmount - orderData.order.amounts.total) < 0.01
+          );
+
+          if (crewOrder) {
+            logSuccess("Order visible in crew dashboard!");
+            logData("Crew Dashboard Order:", crewOrder);
+
+            // Test order status update
+            logStep("5. Testing order status update...");
+            const updateResponse = await fetch(
+              "/kfood_crew/api/ajax/update_order_status.php",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+                body: JSON.stringify({
+                  orderId: crewOrder.id,
+                  status: "preparing",
+                }),
+              }
+            );
+
+            const updateResult = await updateResponse.json();
+            if (updateResult.success) {
+              logSuccess("Order status updated successfully!");
+            } else {
+              logError("Failed to update order status!");
+            }
+          } else {
+            logError("Order not found in crew dashboard!");
+          }
+        } catch (error) {
+          logError(`Test failed: ${error.message}`);
+          console.error(error);
+        }
+      }
+
+      function logStep(message) {
+        const div = document.createElement("div");
+        div.className = "result";
+        div.textContent = message;
+        results.appendChild(div);
+      }
+
+      function logSuccess(message) {
+        const div = document.createElement("div");
+        div.className = "result success";
+        div.textContent = "✓ " + message;
+        results.appendChild(div);
+      }
+
+      function logError(message) {
+        const div = document.createElement("div");
+        div.className = "result error";
+        div.textContent = "✗ " + message;
+        results.appendChild(div);
+      }
+
+      function logData(label, data) {
+        const div = document.createElement("div");
+        div.className = "result";
+        div.innerHTML = `${label}<br><pre>${JSON.stringify(
+          data,
+          null,
+          2
+        )}</pre>`;
+        results.appendChild(div);
+      }
+
+      // Run the test when page loads
+      runTest();
+    </script>
+  </body>
+</html>

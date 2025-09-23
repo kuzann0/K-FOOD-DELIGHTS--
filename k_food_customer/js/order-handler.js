@@ -31,7 +31,17 @@ class OrderHandler {
   }
 
   setupEventListeners() {
-    this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+    this.submitBtn.addEventListener("click", () =>
+      this.showConfirmationModal()
+    );
+
+    // Modal buttons
+    document
+      .querySelector(".btn-confirm")
+      ?.addEventListener("click", () => this.processOrder());
+    document
+      .querySelector(".btn-cancel")
+      ?.addEventListener("click", () => this.hideModal());
 
     // Real-time validation
     this.form.querySelectorAll("input, textarea").forEach((input) => {
@@ -96,6 +106,191 @@ class OrderHandler {
     error.className = "error-message";
     container.appendChild(error);
     return error;
+  }
+
+  showConfirmationModal() {
+    // Validate form first
+    const isValid = Array.from(this.form.elements).every(
+      (input) => !input.name || this.validateField(input)
+    );
+
+    if (!isValid) {
+      alert("Please fill in all required fields correctly");
+      return;
+    }
+
+    // Get order details
+    const orderDetails = this.getOrderDetails();
+
+    // Update modal content
+    const modalContent = document.querySelector(".order-summary-modal");
+    modalContent.innerHTML = this.generateOrderSummaryHTML(orderDetails);
+
+    // Show modal
+    this.modal.style.display = "block";
+  }
+
+  hideModal() {
+    this.modal.style.display = "none";
+  }
+
+  getOrderDetails() {
+    const formData = new FormData(this.form);
+    return {
+      items: JSON.parse(document.getElementById("cart-data")?.value || "[]"),
+      paymentMethod: formData.get("paymentMethod"),
+      address: formData.get("address"),
+      instructions: formData.get("deliveryInstructions"),
+      total: document.querySelector(".total")?.textContent || "₱0.00",
+    };
+  }
+
+  generateOrderSummaryHTML(orderDetails) {
+    let html = '<div class="order-items">';
+
+    // Add items
+    orderDetails.items.forEach((item) => {
+      html += `
+        <div class="order-item">
+          <span>${this.escapeHtml(item.name)} x ${item.quantity}</span>
+          <span>₱${(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+      `;
+    });
+
+    // Add total and other details
+    html += `
+      <div class="order-total">
+        <strong>Total:</strong> ${orderDetails.total}
+      </div>
+      <div class="order-details">
+        <p><strong>Delivery Address:</strong> ${this.escapeHtml(
+          orderDetails.address
+        )}</p>
+        <p><strong>Payment Method:</strong> ${this.escapeHtml(
+          orderDetails.paymentMethod
+        )}</p>
+        ${
+          orderDetails.instructions
+            ? `<p><strong>Instructions:</strong> ${this.escapeHtml(
+                orderDetails.instructions
+              )}</p>`
+            : ""
+        }
+      </div>
+    `;
+
+    return html;
+  }
+
+  async processOrder() {
+    console.log("Starting order processing...");
+    const confirmBtn = document.querySelector(".btn-confirm");
+    if (!confirmBtn) {
+      console.error("Confirm button not found!");
+      return;
+    }
+    const originalText = confirmBtn.textContent;
+    console.log("Got original button text:", originalText);
+
+    try {
+      console.log("Disabling confirm button and updating text...");
+      // Disable button and show loading
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Processing...";
+
+      console.log("Getting order details...");
+      const orderDetails = this.getOrderDetails();
+      console.log("Order details:", orderDetails);
+
+      console.log("Getting CSRF token...");
+      // Get CSRF token
+      const csrfToken = document.querySelector(
+        'meta[name="csrf-token"]'
+      )?.content;
+      console.log("CSRF token present:", !!csrfToken);
+
+      console.log("Submitting order to process_order.php...");
+      // Submit order
+      const response = await fetch("process_order.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify(orderDetails),
+      });
+
+      console.log("Got response from process_order.php");
+      const result = await response.json();
+      console.log("Order submission result:", result);
+
+      if (!result.success) {
+        console.error("Order submission failed:", result.message);
+        throw new Error(result.message || "Failed to place order");
+      }
+
+      console.log("Order submitted successfully, hiding modal...");
+      // Hide modal
+      this.hideModal();
+
+      console.log("Showing success notification...");
+      // Show success notification
+      this.showSuccessNotification();
+
+      console.log("Notifying crew through WebSocket...");
+      // Notify crew through WebSocket
+      this.notifyCrewNewOrder(result.orderId);
+      console.log("WebSocket notification sent");
+
+      console.log("Setting up redirect to order confirmation...");
+      // Redirect to order confirmation page after 2 seconds
+      setTimeout(() => {
+        console.log("Redirecting to order confirmation page...");
+        window.location.href = `order_confirmation.php?order_id=${result.orderId}`;
+      }, 2000);
+    } catch (error) {
+      console.error("Order processing error:", error);
+      alert("Failed to place order: " + error.message);
+    } finally {
+      // Reset button state
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = originalText;
+    }
+  }
+
+  showSuccessNotification() {
+    const notification = document.getElementById("orderSuccessNotification");
+    notification.style.display = "block";
+
+    // Hide notification after 5 seconds
+    setTimeout(() => {
+      notification.style.display = "none";
+    }, 5000);
+  }
+
+  notifyCrewNewOrder(orderId) {
+    console.log("Checking WebSocket connection...");
+    if (this.wsHandler?.isConnected()) {
+      console.log("WebSocket is connected, sending new order notification");
+      try {
+        this.wsHandler.send({
+          type: "new_order",
+          orderId: orderId,
+        });
+        console.log("WebSocket notification sent successfully");
+      } catch (error) {
+        console.error("Error sending WebSocket notification:", error);
+      }
+    } else {
+      console.error("WebSocket is not connected!");
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   validateForm() {

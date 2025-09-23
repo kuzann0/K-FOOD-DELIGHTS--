@@ -21,5 +21,6 @@ if not exist vendor\autoload.php (
 )
 
 REM Start the WebSocket server
-php -d extension=zip websocket_server_main.php
+cd ..\websocket
+php -d extension=zip server.php
 pause

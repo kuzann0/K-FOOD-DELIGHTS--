@@ -1,0 +1,185 @@
+/* Sidebar Styles */
+.sidebar {
+  width: 280px;
+  height: 100vh;
+  background: #2c3e50;
+  color: #ecf0f1;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  z-index: 1000;
+}
+
+/* Header */
+.sidebar-header {
+  padding: 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid #34495e;
+  background: #243342;
+}
+
+.sidebar-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #ecf0f1;
+}
+
+/* Navigation */
+.sidebar-nav {
+  padding: 1rem 0;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-nav li {
+  margin: 0;
+  padding: 0;
+}
+
+/* Section Headers */
+.nav-section {
+  margin-bottom: 1rem;
+}
+
+.nav-section-title {
+  display: block;
+  padding: 0.75rem 1.5rem;
+  color: #3498db;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-section-title i {
+  margin-right: 0.5rem;
+}
+
+/* Links */
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: #bdc3c7;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.sidebar-nav a:hover {
+  background: #34495e;
+  color: #fff;
+}
+
+.sidebar-nav a i {
+  width: 20px;
+  margin-right: 0.75rem;
+  font-size: 1.1rem;
+}
+
+/* Active State */
+.sidebar-nav li.active > a {
+  background: #3498db;
+  color: #fff;
+}
+
+/* Submenu */
+.submenu {
+  background: #243342;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease-out;
+}
+
+.nav-section:hover .submenu,
+.nav-section.active .submenu {
+  max-height: 1000px;
+  transition: max-height 0.5s ease-in;
+}
+
+.submenu a {
+  padding-left: 3rem;
+  font-size: 0.9rem;
+}
+
+.submenu a i {
+  font-size: 0.9rem;
+}
+
+/* Hover Effects */
+.sidebar-nav a:hover i {
+  transform: translateX(3px);
+  transition: transform 0.2s ease;
+}
+
+/* Status Indicators */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: auto;
+}
+
+.status-active {
+  background: #2ecc71;
+}
+
+.status-pending {
+  background: #f1c40f;
+}
+
+.status-inactive {
+  background: #e74c3c;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 60px;
+  }
+
+  .sidebar:hover {
+    width: 280px;
+  }
+
+  .sidebar-header h2,
+  .sidebar-nav span:not(.status-indicator) {
+    display: none;
+  }
+
+  .sidebar:hover .sidebar-header h2,
+  .sidebar:hover .sidebar-nav span:not(.status-indicator) {
+    display: inline;
+  }
+
+  .submenu {
+    position: absolute;
+    left: 60px;
+    top: 0;
+    width: 200px;
+    background: #2c3e50;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+  }
+
+  .sidebar:hover .submenu {
+    position: static;
+    width: auto;
+    box-shadow: none;
+  }
+
+  .submenu a {
+    padding-left: 1.5rem;
+  }
+}

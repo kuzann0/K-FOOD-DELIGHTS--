@@ -1,0 +1,32 @@
+[2025-09-19 14:52:29] New connection: 68
+[2025-09-19 14:52:29] Client 68 authenticated as customer
+[2025-09-19 14:55:18] New connection: 68
+[2025-09-19 14:55:18] Client 68 authenticated as customer
+[2025-09-19 14:55:22] Error processing new order: Unknown column 'items' in 'field list'
+[2025-09-19 14:55:22] Client 68 authenticated as crew
+[2025-09-19 14:55:23] Order #1 status updated to: preparing
+[2025-09-19 14:55:23] Client 68 authenticated as admin
+[2025-09-19 14:55:23] Unknown message type: system_alert
+[2025-09-19 14:55:28] Error processing message: Invalid message format
+[2025-09-19 14:55:28] Connection 68 closed
+[2025-09-19 15:00:02] New connection: 68
+[2025-09-19 15:00:02] Error: Invalid message format
+[2025-09-19 15:00:02] Connection 68 closed
+[2025-09-19 15:06:01] New connection: 68
+[2025-09-19 15:06:01] Error: Invalid message format
+[2025-09-19 15:06:01] Connection 68 closed
+[2025-09-19 15:10:46] New connection: 100
+[2025-09-19 15:10:46] Error: Invalid message format
+[2025-09-19 15:10:46] Connection 100 closed
+[2025-09-19 15:19:13] New connection: 68
+[2025-09-19 15:19:13] Error: Invalid message format
+[2025-09-19 15:19:13] Connection 68 closed
+[2025-09-19 16:27:37] New connection: 100
+[2025-09-19 16:27:37] Error: Invalid message format
+[2025-09-19 16:27:37] Connection 100 closed
+[2025-09-19 16:54:29] New connection: 103
+[2025-09-19 16:54:29] Error: Invalid message format
+[2025-09-19 16:54:29] Connection 103 closed
+[2025-09-23T09:33:15.359968+02:00] websocket.INFO: WebSocket server initialized [] []
+[2025-09-23T09:36:55.486493+02:00] websocket.INFO: WebSocket server initialized [] []
+[2025-09-23T09:51:58.486244+02:00] websocket.INFO: WebSocket server initialized [] []

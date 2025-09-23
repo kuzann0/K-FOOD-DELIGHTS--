@@ -4,7 +4,6 @@ require_once 'config.php';
 require_once 'includes/ErrorHandler.php';
 require_once 'includes/OrderValidator.php';
 require_once 'includes/NotificationHandler.php';
-require_once 'includes/WebSocketHandler.php';
 
 // Helper functions
 function generateUniqueOrderNumber($conn) {
@@ -38,6 +37,30 @@ function generateUniqueOrderNumber($conn) {
 function processOrder($conn, $data, $orderNumber) {
     try {
         $conn->begin_transaction();
+        
+        // Check inventory levels first
+        foreach ($data['cartItems'] as $item) {
+            $checkStmt = $conn->prepare("SELECT id, stock_quantity FROM menu_items WHERE item_name = ? AND status = 'active' FOR UPDATE");
+            $checkStmt->bind_param("s", $item['name']);
+            $checkStmt->execute();
+            $result = $checkStmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                throw new OrderProcessingError(
+                    "Item '{$item['name']}' is no longer available",
+                    "INVENTORY_ERROR"
+                );
+            }
+            
+            $menuItem = $result->fetch_assoc();
+            if ($menuItem['stock_quantity'] < $item['quantity']) {
+                throw new OrderProcessingError(
+                    "Not enough stock for item '{$item['name']}'. Available: {$menuItem['stock_quantity']}, Requested: {$item['quantity']}",
+                    "INVENTORY_ERROR"
+                );
+            }
+            $checkStmt->close();
+        }
         
         // Insert main order
         $sql = "INSERT INTO orders (
@@ -83,7 +106,7 @@ function processOrder($conn, $data, $orderNumber) {
         $stmt->bind_param(
             "issdsssssddds",
             $_SESSION['user_id'],
-            $data['customerInfo']['fullName'],
+            $data['customerInfo']['name'],
             $orderNumber,
             $data['amounts']['total'],
             $paymentStatus,
@@ -91,8 +114,8 @@ function processOrder($conn, $data, $orderNumber) {
             $data['customerInfo']['phone'],
             $data['customerInfo']['deliveryInstructions'],
             $promoId,
-            $data['amounts']['discounts']['promo'],
-            ($data['amounts']['discounts']['senior'] + $data['amounts']['discounts']['pwd']),
+            $data['amounts']['totalDiscount'],
+            0, // No senior/PWD discounts for now
             $discountId
         );
         
@@ -136,15 +159,83 @@ function processOrder($conn, $data, $orderNumber) {
                     "DATABASE_ERROR"
                 );
             }
+
+            // Update inventory
+            $updateStmt = $conn->prepare("
+                UPDATE menu_items 
+                SET stock_quantity = stock_quantity - ?,
+                    last_updated = NOW()
+                WHERE item_name = ? AND status = 'active'
+            ");
+            $updateStmt->bind_param("is", $item['quantity'], $item['name']);
+            
+            if (!$updateStmt->execute()) {
+                throw new OrderProcessingError(
+                    "Failed to update inventory for item '{$item['name']}'",
+                    "DATABASE_ERROR"
+                );
+            }
+            $updateStmt->close();
         }
         
         $itemStmt->close();
 
-        // If GCash payment, store reference
-        if ($data['payment']['method'] === 'gcash' && !empty($data['payment']['gcashReference'])) {
+        // If GCash payment, validate and store reference
+        if ($data['payment']['method'] === 'gcash') {
+            if (empty($data['payment']['gcashReference'])) {
+                throw new OrderProcessingError(
+                    "GCash reference number is required",
+                    "PAYMENT_ERROR"
+                );
+            }
+
+            // Validate GCash reference number format
+            $referenceNumber = $data['payment']['gcashReference'];
+            if (!preg_match('/^[0-9]{10,13}$/', $referenceNumber)) {
+                throw new OrderProcessingError(
+                    "Invalid GCash reference number format",
+                    "PAYMENT_ERROR",
+                    ['reference' => $referenceNumber]
+                );
+            }
+
+            // Check for duplicate reference number
+            $checkRefStmt = $conn->prepare("
+                SELECT 1 FROM payment_details 
+                WHERE payment_method = 'gcash' 
+                AND reference_number = ?
+                LIMIT 1
+            ");
+            $checkRefStmt->bind_param("s", $referenceNumber);
+            $checkRefStmt->execute();
+            if ($checkRefStmt->get_result()->num_rows > 0) {
+                throw new OrderProcessingError(
+                    "This GCash reference number has already been used",
+                    "PAYMENT_ERROR",
+                    ['reference' => $referenceNumber]
+                );
+            }
+            $checkRefStmt->close();
+
+            // Validate payment amount
+            $expectedAmount = $data['amounts']['total'];
+            $paidAmount = $data['payment']['amount'] ?? null;
+            if ($paidAmount === null || abs($paidAmount - $expectedAmount) > 0.01) {
+                throw new OrderProcessingError(
+                    "Payment amount does not match order total",
+                    "PAYMENT_ERROR",
+                    [
+                        'expected' => $expectedAmount,
+                        'received' => $paidAmount
+                    ]
+                );
+            }
+
+            // Store payment details
             $paymentSql = "INSERT INTO payment_details (
-                order_id, payment_method, reference_number, amount, status
-            ) VALUES (?, 'gcash', ?, ?, 'completed')";
+                order_id, payment_method, reference_number, amount, 
+                status, payment_date, verified_at
+            ) VALUES (?, 'gcash', ?, ?, 'completed', NOW(), NOW())";
             
             $paymentStmt = $conn->prepare($paymentSql);
             if (!$paymentStmt) {
@@ -157,8 +248,8 @@ function processOrder($conn, $data, $orderNumber) {
             $paymentStmt->bind_param(
                 "isd",
                 $orderId,
-                $data['payment']['gcashReference'],
-                $data['amounts']['total']
+                $referenceNumber,
+                $expectedAmount
             );
             
             if (!$paymentStmt->execute()) {
@@ -221,10 +312,34 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Initialize error handler
-$errorHandler = new ErrorHandler($conn);
+    // Initialize error handler
+    $errorHandler = new ErrorHandler($conn);
 
-try {
+    try {
+        // Check rate limits - max 5 orders per 30 minutes per user
+        $rateLimitStmt = $conn->prepare("
+            SELECT COUNT(*) as order_count
+            FROM orders
+            WHERE user_id = ?
+            AND created_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+        ");
+        $rateLimitStmt->bind_param("i", $_SESSION['user_id']);
+        $rateLimitStmt->execute();
+        $result = $rateLimitStmt->get_result();
+        $orderCount = $result->fetch_assoc()['order_count'];
+        $rateLimitStmt->close();
+
+        if ($orderCount >= 5) {
+            throw new OrderProcessingError(
+                "Order limit reached. Please try again later.",
+                "RATE_LIMIT_ERROR",
+                [
+                    'limit' => 5,
+                    'windowMinutes' => 30,
+                    'currentCount' => $orderCount
+                ]
+            );
+        }
     // Check if user is logged in
     if (!isset($_SESSION['user_id'])) {
         throw new OrderProcessingError(
@@ -232,6 +347,51 @@ try {
             'AUTHENTICATION_ERROR'
         );
     }
+
+    // Check for idempotency key
+    $idempotencyKey = $_SERVER['HTTP_X_IDEMPOTENCY_KEY'] ?? null;
+    if (!$idempotencyKey) {
+        throw new OrderProcessingError(
+            'Idempotency key is required',
+            'VALIDATION_ERROR'
+        );
+    }
+
+    // Check if this request was already processed
+    $idempotencyStmt = $conn->prepare("
+        SELECT order_id, status 
+        FROM order_requests 
+        WHERE idempotency_key = ? AND user_id = ?
+        LIMIT 1
+    ");
+    $idempotencyStmt->bind_param("si", $idempotencyKey, $_SESSION['user_id']);
+    $idempotencyStmt->execute();
+    $result = $idempotencyStmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $previousRequest = $result->fetch_assoc();
+        if ($previousRequest['status'] === 'completed') {
+            throw new OrderProcessingError(
+                'This order has already been processed',
+                'DUPLICATE_ORDER',
+                ['orderId' => $previousRequest['order_id']]
+            );
+        }
+        // If status is 'in_progress', the previous request might have failed
+        // We'll allow this request to proceed but use the same idempotency record
+    } else {
+        // Create new idempotency record
+        $createIdempotencyStmt = $conn->prepare("
+            INSERT INTO order_requests (
+                idempotency_key, user_id, request_data, status, created_at
+            ) VALUES (?, ?, ?, 'in_progress', NOW())
+        ");
+        $requestData = json_encode($data);
+        $createIdempotencyStmt->bind_param("sis", $idempotencyKey, $_SESSION['user_id'], $requestData);
+        $createIdempotencyStmt->execute();
+        $createIdempotencyStmt->close();
+    }
+    $idempotencyStmt->close();
 
     // Get and validate raw POST data
     $jsonData = file_get_contents('php://input');
@@ -307,6 +467,24 @@ try {
         $wsHandler = new WebSocketHandler();
         $wsHandler->broadcastNewOrder($orderData);
         
+        // Update idempotency record
+        $updateIdempotencyStmt = $conn->prepare("
+            UPDATE order_requests 
+            SET status = 'completed', 
+                order_id = ?,
+                completed_at = NOW() 
+            WHERE idempotency_key = ? 
+            AND user_id = ?
+        ");
+        $updateIdempotencyStmt->bind_param(
+            "isi", 
+            $orderId, 
+            $idempotencyKey, 
+            $_SESSION['user_id']
+        );
+        $updateIdempotencyStmt->execute();
+        $updateIdempotencyStmt->close();
+
         // Commit transaction
         $conn->commit();
         
@@ -335,18 +513,63 @@ try {
     }
 
 } catch (OrderProcessingError $e) {
-    // Handle expected errors
+    // Log the error with context
+    $errorContext = [
+        'errorType' => $e->getErrorType(),
+        'userId' => $_SESSION['user_id'] ?? null,
+        'requestData' => $data ?? null,
+        'timestamp' => date('Y-m-d H:i:s'),
+        'additionalData' => $e->getErrorData()
+    ];
+    error_log(json_encode([
+        'level' => 'ERROR',
+        'message' => $e->getMessage(),
+        'context' => $errorContext
+    ]));
+
+    // Set appropriate HTTP status code
+    switch ($e->getErrorType()) {
+        case 'AUTHENTICATION_ERROR':
+            http_response_code(401);
+            break;
+        case 'VALIDATION_ERROR':
+            http_response_code(400);
+            break;
+        case 'INVENTORY_ERROR':
+            http_response_code(409);
+            break;
+        case 'PAYMENT_ERROR':
+            http_response_code(402);
+            break;
+        default:
+            http_response_code(400);
+    }
+
+    // Return detailed error response
     $response = $errorHandler->handleError($e);
-    http_response_code(400);
     echo json_encode($response);
 
 } catch (Exception $e) {
-    // Handle unexpected errors
-    error_log("Order processing error: " . $e->getMessage());
+    // Log unexpected errors with stack trace
+    $errorContext = [
+        'errorType' => 'SYSTEM_ERROR',
+        'userId' => $_SESSION['user_id'] ?? null,
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString(),
+        'timestamp' => date('Y-m-d H:i:s')
+    ];
+    error_log(json_encode([
+        'level' => 'CRITICAL',
+        'message' => $e->getMessage(),
+        'context' => $errorContext
+    ]));
+
+    // Return sanitized error for production
     $response = $errorHandler->handleError(new OrderProcessingError(
-        'An unexpected error occurred',
+        'An unexpected error occurred. Our team has been notified.',
         'SYSTEM_ERROR',
-        ['error' => $e->getMessage()]
+        ['errorId' => uniqid('err_')] // Tracking ID for support
     ));
     http_response_code(500);
     echo json_encode($response);

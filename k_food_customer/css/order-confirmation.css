@@ -1,0 +1,46 @@
+/* Order Confirmation Styles */
+
+.order-summary {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s ease;
+}
+
+.order-item:hover {
+  background-color: #f8f9fa;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.order-item span:first-child {
+  flex-grow: 1;
+}
+
+.order-item span:nth-child(2) {
+  margin: 0 15px;
+  color: #666;
+}
+
+.order-item span:last-child {
+  font-weight: bold;
+  color: #333;
+}
+
+.order-total {
+  margin-top: 20px;
+  padding: 15px 10px;
+  border-top: 2px solid #dee2e6;
+  text-align: right;
+  font-size: 1.2em;
+}

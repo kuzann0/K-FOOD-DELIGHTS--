@@ -1,0 +1,53 @@
+<?php
+// Include modal template
+include 'includes/order-confirmation-modal.php';
+?>
+
+<!-- Notification Container -->
+<div id="notification-container"></div>
+
+<!-- Hidden Input for Cart Data -->
+<input type="hidden" id="cart-data" value="<?php echo htmlspecialchars(json_encode($cartItems)); ?>">
+<input type="hidden" id="order-amounts" value="">
+<input type="hidden" id="csrf-token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
+<!-- Core Scripts -->
+<script src="js/notification-manager.js"></script>
+<script src="js/cart-manager.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/order-confirmation-handler.js"></script>
+<script src="js/checkout-form-handler.js"></script>
+
+<!-- Initialize Features -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize core managers
+    const notificationManager = NotificationManager.getInstance();
+    const cartManager = CartManager.getInstance();
+    const orderConfirmationHandler = new OrderConfirmationHandler();
+
+    // Initialize checkout form handler
+    const checkoutFormHandler = new CheckoutFormHandler();
+
+    // Initialize amounts
+    const cartItems = JSON.parse(document.getElementById('cart-data')?.value || '[]');
+    const initialAmounts = recalculateAmounts(cartItems);
+    updateOrderSummary(initialAmounts);
+
+    // Setup cart update listener
+    document.addEventListener('cartUpdated', function(e) {
+        const updatedAmounts = recalculateAmounts(e.detail.items);
+        updateOrderSummary(updatedAmounts);
+    });
+
+    // Setup discount change listeners
+    const discountCheckboxes = document.querySelectorAll('#seniorDiscount, #pwdDiscount');
+    discountCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const cartItems = JSON.parse(document.getElementById('cart-data')?.value || '[]');
+            const amounts = recalculateAmounts(cartItems);
+            updateOrderSummary(amounts);
+        });
+    });
+});
+</script>

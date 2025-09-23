@@ -1,7 +1,6 @@
 <?php
 require_once 'includes/config.php';
 require_once 'includes/auth.php';
-
 $admin = getCurrentAdmin();
 // Require admin login for dashboard access
 if (!$admin) {
@@ -17,6 +16,8 @@ include 'includes/header_common.php';
 <head>
     <link rel="stylesheet" href="css/admin_dashboard.css">
     <link rel="stylesheet" href="css/user_roles.css">
+    <link rel="stylesheet" href="css/menu_creation.css">
+    <link rel="stylesheet" href="css/system-monitor.css">
 </head>
 <body>
     <div class="admin-container">
@@ -35,15 +36,6 @@ include 'includes/header_common.php';
                             Dashboard
                         </a>
                     </li>
-                    
-                    <?php if (hasPermission('manage_system')): ?>
-                    <li>
-                        <a href="modules/maintenance.php">
-                            <i class="fas fa-tools"></i>
-                            Maintenance
-                        </a>
-                    </li>
-                    <?php endif; ?>
                     
                     <?php if (hasPermission('manage_content')): ?>
                     <li>
@@ -83,9 +75,9 @@ include 'includes/header_common.php';
                     
                     <?php if (hasPermission('manage_menu')): ?>
                     <li>
-                        <a href="modules/menu.php">
+                        <a href="#" id="menuCreationLink">
                             <i class="fas fa-utensils"></i>
-                            Menu Items
+                            Menu Creation
                         </a>
                     </li>
                     <?php endif; ?>
@@ -129,6 +121,159 @@ include 'includes/header_common.php';
             <div class="dashboard-content" id="mainContent">
                 <div class="dashboard-header">
                     <h1>Dashboard</h1>
+                </div>
+
+                <!-- Main Dashboard Panels -->
+                <div class="dashboard-panels">
+                    <!-- Administrator Module -->
+                    <div class="module-section maintenance-module">
+                        <h2><i class="fas fa-cogs"></i> Maintenance</h2>
+                        <div class="panel-grid">
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-paint-brush"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Landing Page Setting</h3>
+                                    <p>Modify landing page elements, contact information, and business profiles.</p>
+                                    <a href="modules/landing.php" class="panel-link">Manage Settings</a>
+                                </div>
+                            </div>
+                            
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>User Role Management</h3>
+                                    <p>Add, update, and monitor user roles for account management.</p>
+                                    <a href="#" class="panel-link" id="userRolesPanelLink">Manage Roles</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>User Account Management</h3>
+                                    <p>Manage user accounts and ensure smooth operations.</p>
+                                    <a href="modules/users.php" class="panel-link">Manage Users</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Inventory Management</h3>
+                                    <p>Add and manage products with necessary details.</p>
+                                    <a href="modules/inventory.php" class="panel-link">Manage Inventory</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-th-list"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Product Category</h3>
+                                    <p>Organize products into defined categories.</p>
+                                    <a href="modules/categories.php" class="panel-link">Manage Categories</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Menu Creation</h3>
+                                    <p>Generate finished goods from raw product data.</p>
+                                    <a href="#" class="panel-link" id="menuCreationPanelLink">Create Menu</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monitoring Module -->
+                    <div class="module-section monitoring-module">
+                        <h2><i class="fas fa-chart-line"></i> Monitoring</h2>
+                        <div class="panel-grid">
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-chart-bar"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Sales Reports</h3>
+                                    <p>Generate daily, weekly, monthly, quarterly, and annual reports.</p>
+                                    <a href="modules/sales-reports.php" class="panel-link">View Reports</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Inventory Report</h3>
+                                    <p>Track current stock levels and inventory movement history.</p>
+                                    <a href="modules/inventory-reports.php" class="panel-link">View Reports</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Expiration Reports</h3>
+                                    <p>Track expired goods and minimize waste.</p>
+                                    <a href="modules/expiration-reports.php" class="panel-link">View Reports</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Status Module -->
+                    <div class="module-section order-module">
+                        <h2><i class="fas fa-shopping-cart"></i> Order Status</h2>
+                        <div class="panel-grid">
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Pending Orders</h3>
+                                    <p>Orders being processed and prepared.</p>
+                                    <a href="modules/orders.php?status=pending" class="panel-link">View Pending</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Delivery Status</h3>
+                                    <p>Track orders out for delivery.</p>
+                                    <a href="modules/orders.php?status=delivered" class="panel-link">View Deliveries</a>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="panel-content">
+                                    <h3>Completed Orders</h3>
+                                    <p>Orders successfully delivered to customers.</p>
+                                    <a href="modules/orders.php?status=completed" class="panel-link">View Completed</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- User Roles Section -->
@@ -375,32 +520,135 @@ include 'includes/header_common.php';
                 </div>
                 
                 <div class="dashboard-stats">
-                    <!-- Quick Stats -->
-                    <div class="stat-card">
-                        <h3>Today's Orders</h3>
-                        <div class="stat-value" id="todayOrders">Loading...</div>
+                    <!-- System Health Overview -->
+                    <div class="stat-section system-health">
+                        <h2>System Health</h2>
+                        <div class="stat-grid">
+                            <div class="stat-card">
+                                <h3>System Load</h3>
+                                <div class="stat-value" id="systemLoad">
+                                    <span class="value">Loading...</span>
+                                    <div class="progress-bar" id="loadProgressBar"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Memory Usage</h3>
+                                <div class="stat-value" id="memoryUsage">
+                                    <span class="value">Loading...</span>
+                                    <div class="progress-bar" id="memoryProgressBar"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Error Rate</h3>
+                                <div class="stat-value" id="errorRate">
+                                    <span class="value">Loading...</span>
+                                    <div class="trend-indicator"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Response Time</h3>
+                                <div class="stat-value" id="responseTime">
+                                    <span class="value">Loading...</span>
+                                    <div class="trend-indicator"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <h3>Today's Revenue</h3>
-                        <div class="stat-value" id="todayRevenue">Loading...</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <h3>Low Stock Items</h3>
-                        <div class="stat-value" id="lowStockCount">Loading...</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <h3>Active Users</h3>
-                        <div class="stat-value" id="activeUsers">Loading...</div>
+
+                    <!-- Business Metrics -->
+                    <div class="stat-section business-metrics">
+                        <h2>Business Metrics</h2>
+                        <div class="stat-grid">
+                            <div class="stat-card">
+                                <h3>Today's Orders</h3>
+                                <div class="stat-value" id="todayOrders">
+                                    <span class="value">Loading...</span>
+                                    <span class="trend"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Today's Revenue</h3>
+                                <div class="stat-value" id="todayRevenue">
+                                    <span class="value">Loading...</span>
+                                    <span class="trend"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Low Stock Items</h3>
+                                <div class="stat-value" id="lowStockCount">
+                                    <span class="value">Loading...</span>
+                                    <div class="alert-indicator"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Active Users</h3>
+                                <div class="stat-value" id="activeUsers">
+                                    <span class="value">Loading...</span>
+                                    <div class="trend-indicator"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="dashboard-alerts">
-                    <h2>Recent Alerts</h2>
-                    <div id="alertsList" class="alerts-list">
-                        Loading alerts...
+                <!-- System Alerts and Notifications -->
+                <div class="monitoring-section">
+                    <div class="dashboard-alerts">
+                        <div class="section-header">
+                            <h2>System Alerts</h2>
+                            <div class="alert-controls">
+                                <select id="alertSeverityFilter">
+                                    <option value="all">All Severities</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                                <button id="refreshAlerts" class="btn-refresh">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="alertsList" class="alerts-list">
+                            Loading alerts...
+                        </div>
+                    </div>
+
+                    <!-- System Health Checks -->
+                    <div class="health-checks">
+                        <h2>Health Checks</h2>
+                        <div class="health-checks-grid" id="healthChecksGrid">
+                            <div class="health-check-card" id="dbHealth">
+                                <i class="fas fa-database"></i>
+                                <span class="check-name">Database</span>
+                                <span class="status">Checking...</span>
+                            </div>
+                            
+                            <div class="health-check-card" id="websocketHealth">
+                                <i class="fas fa-plug"></i>
+                                <span class="check-name">WebSocket</span>
+                                <span class="status">Checking...</span>
+                            </div>
+                            
+                            <div class="health-check-card" id="cacheHealth">
+                                <i class="fas fa-memory"></i>
+                                <span class="check-name">Cache</span>
+                                <span class="status">Checking...</span>
+                            </div>
+                            
+                            <div class="health-check-card" id="queueHealth">
+                                <i class="fas fa-tasks"></i>
+                                <span class="check-name">Job Queue</span>
+                                <span class="status">Checking...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -415,6 +663,143 @@ include 'includes/header_common.php';
                         <canvas id="popularItemsChart"></canvas>
                     </div>
                 </div>
+
+                <!-- Menu Creation Panel -->
+                <div class="menu-creation-panel" id="menuCreationPanel" style="display: none;">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-utensils"></i> Create Menu Item</h2>
+                        <button type="button" class="btn-close" id="closeMenuPanel">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <form id="menuItemForm" class="menu-form" enctype="multipart/form-data">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="category_id">Category</label>
+                                <select id="category_id" name="category_id" required>
+                                    <!-- Categories will be loaded dynamically -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="name">Item Name</label>
+                                <input type="text" id="name" name="name" required
+                                       placeholder="Enter item name">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea id="description" name="description" rows="3"
+                                      placeholder="Enter item description"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="price">Price (PHP)</label>
+                                <input type="number" id="price" name="price" required
+                                       min="0" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="is_available">Availability</label>
+                                <select id="is_available" name="is_available">
+                                    <option value="1">Available</option>
+                                    <option value="0">Not Available</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="item_image">Item Image</label>
+                            <div class="image-upload-container">
+                                <img id="imagePreview" src="../resources/images/default-food.png" 
+                                     alt="Preview" class="image-preview">
+                                <div class="upload-controls">
+                                    <input type="file" id="item_image" name="item_image" 
+                                           accept="image/*" style="display: none;">
+                                    <button type="button" class="btn-upload" id="triggerUpload">
+                                        <i class="fas fa-camera"></i> Choose Image
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" id="resetMenuForm">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Create Item
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Menu Items List -->
+                    <div class="menu-items-list">
+                        <h3>Current Menu Items</h3>
+                        <div class="menu-items-grid" id="menuItemsGrid">
+                            <!-- Items will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Creation Section -->
+                <div class="menu-creation-section" id="menuCreationSection" style="display: none;">
+                    <div class="section-header">
+                        <h2>Menu Creation</h2>
+                        <p class="section-description">Create and manage menu items</p>
+                    </div>
+
+                    <div class="menu-form-container">
+                        <form id="menuItemForm" class="menu-form">
+                            <div class="form-status">
+                                <div class="loading-indicator" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    Creating menu item...
+                                </div>
+                                <div id="menuFormMessage" class="form-message"></div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="item_name">Item Name</label>
+                                    <input type="text" id="item_name" name="item_name" required
+                                           pattern="^[a-zA-Z0-9\s\-']+$"
+                                           title="Please enter a valid item name using letters, numbers, spaces, hyphens, and apostrophes">
+                                    <small class="validation-message"></small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="item_price">Price (PHP)</label>
+                                    <input type="number" id="item_price" name="item_price" required
+                                           min="0" step="0.01"
+                                           placeholder="0.00"
+                                           title="Please enter a valid price">
+                                    <small class="validation-message"></small>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="reset" class="btn-secondary">
+                                    <i class="fas fa-undo"></i>
+                                    Reset Form
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Create Menu Item
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Menu Items List -->
+                    <div class="menu-items-list">
+                        <h3>Available Menu Items</h3>
+                        <div class="menu-items-grid" id="menuItemsList">
+                            <!-- Menu items will be loaded here dynamically -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -424,6 +809,8 @@ include 'includes/header_common.php';
     <script src="js/admin_script.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/user_roles.js"></script>
+    <script src="js/menu_creation.js"></script>
+    <script src="js/system-monitor.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize role management
@@ -517,6 +904,35 @@ include 'includes/header_common.php';
             }
 
             // Setup user roles link
+            // Setup sidebar link handlers
+            function setupSidebarLink(linkId, sectionId) {
+                const link = document.getElementById(linkId);
+                if (link) {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Hide all content sections
+                        document.querySelectorAll('.dashboard-content > div').forEach(el => {
+                            el.style.display = 'none';
+                        });
+                        // Show requested section
+                        const section = document.getElementById(sectionId);
+                        if (section) {
+                            section.style.display = 'block';
+                        }
+                        // Update active state in sidebar
+                        document.querySelectorAll('.sidebar-nav li').forEach(li => {
+                            li.classList.remove('active');
+                        });
+                        this.parentElement.classList.add('active');
+                    });
+                }
+            }
+
+            // Setup event handlers for sidebar links
+            setupSidebarLink('userRolesLink', 'userRolesSection');
+            setupSidebarLink('menuCreationLink', 'menuCreationSection');
+
+            // Original user roles link handler for compatibility
             const userRolesLink = document.getElementById('userRolesLink');
             if (userRolesLink) {
                 userRolesLink.addEventListener('click', function(e) {

@@ -6,7 +6,26 @@
 - [Installation](#installation)
 - [Database Setup](#database-setup)
 - [Module Configuration](#module-configuration)
-- [WebSocket Server Setup](#websocket-server-setup)
+- [AJ### 2. Testing
+
+### 1. Module Access Tests
+
+Test login redirection for each role:
+
+1. Superadmin → Admin Dashboard
+2. Admin → Admin Dashboard
+3. Crew → Crew Interface
+4. Customer → Customer Portal
+
+### 2. AJAX Communication Test
+
+1. Test order submission and status updates
+2. Verify polling intervals and data refresh
+3. Check error handling and retries
+4. Monitor rate limiting effectiveness
+
+### 3. Security Test#ajax-configuration)
+
 - [Final Configuration](#final-configuration)
 - [Testing](#testing)
 - [Launching the System](#launching-the-system)
@@ -139,37 +158,48 @@ Execute in order:
    composer install
    ```
 
-## WebSocket Server Setup
+## AJAX Configuration
 
-### 1. Install WebSocket Dependencies
+### 1. Configure Rate Limiting
 
-```bash
-cd k_food_customer
-composer require cboden/ratchet
-```
+1. Update rate limiting settings in `config.php`:
+   ```php
+   define('AJAX_RATE_LIMIT', 60);  // Requests per minute
+   define('AJAX_RATE_WINDOW', 60); // Time window in seconds
+   ```
 
-### 2. Configure WebSocket
+### 2. Configure Polling Intervals
 
-1. Update WebSocket configuration in `websocket-config.js`:
+1. Set polling intervals in `js/ajax-handler.js`:
    ```javascript
-   const config = {
-     port: 8080,
-     host: "localhost",
+   const POLLING_INTERVALS = {
+     ORDER_STATUS: 5000, // 5 seconds
+     KITCHEN_STATUS: 3000, // 3 seconds
+     SYSTEM_METRICS: 30000, // 30 seconds
    };
    ```
 
-### 3. Start WebSocket Server
+### 3. API Endpoint Configuration
 
-Windows:
+Ensure all AJAX endpoints are properly configured:
 
-```powershell
-start_websocket_server.bat
-```
+1. Order Status: `/api/order_status.php`
+2. Kitchen Status: `/api/kitchen_status.php`
+3. System Metrics: `/api/system_metrics.php`
 
-Linux/Mac:
+### 4. Error Handling
 
-```bash
-./start_websocket_server.sh
+Configure error handling in `includes/ajax-handler.php`:
+
+```php
+// Maximum retries for failed requests
+define('MAX_RETRIES', 3);
+
+// Retry delay (milliseconds)
+define('RETRY_DELAY', 1000);
+
+// Request timeout (milliseconds)
+define('REQUEST_TIMEOUT', 10000);
 ```
 
 ## Final Configuration
@@ -198,7 +228,8 @@ Create `.env` file in project root:
 ```env
 APP_ENV=production
 DEBUG_MODE=false
-WEBSOCKET_PORT=8080
+AJAX_RATE_LIMIT=60
+AJAX_RATE_WINDOW=60
 ```
 
 ## Testing
@@ -212,11 +243,11 @@ Test login redirection for each role:
 3. Crew → Crew Interface
 4. Customer → Customer Portal
 
-### 2. WebSocket Test
+### 2. Order System Test
 
-1. Start WebSocket server
-2. Place test order
-3. Verify real-time updates in crew dashboard
+1. Place test order
+2. Verify AJAX polling updates in crew dashboard
+3. Check order status updates
 
 ### 3. Security Test
 
@@ -229,11 +260,10 @@ Test login redirection for each role:
 ### 1. Start Services
 
 1. Start XAMPP (Apache + MySQL)
-2. Start WebSocket server
-3. Verify all services running:
+2. Verify all services running:
    - Apache: `http://localhost`
    - MySQL: Check phpMyAdmin
-   - WebSocket: Check port 8080
+   - Test AJAX endpoints
 
 ### 2. Access Points
 
@@ -267,7 +297,7 @@ Test Customer:
 
 - [Authentication Flow](docs/authentication.md)
 - [Order Processing](docs/order-flow.md)
-- [WebSocket Protocol](docs/websocket.md)
+- [AJAX Architecture](docs/ajax-architecture.md)
 - [User Roles](docs/user-roles.md)
 - [Error Logging](docs/error-log.md)
 
@@ -285,7 +315,7 @@ Regular maintenance tasks:
 
 1. Check error logs weekly
 2. Update database backups
-3. Monitor WebSocket server status
+3. Monitor AJAX polling status
 4. Review security settings
 
 ---

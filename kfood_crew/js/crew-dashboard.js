@@ -9,8 +9,8 @@ class OrderManager {
   }
 
   init() {
-    // Initialize WebSocket before other operations
-    this.initializeWebSocket()
+    // Initialize AJAX polling before other operations
+    this.initializePolling()
       .then(() => {
         this.setupEventListeners();
         this.loadOrders();
@@ -26,80 +26,69 @@ class OrderManager {
       });
   }
 
-  async initializeWebSocket() {
+  async initializePolling() {
     try {
-      // Get WebSocket configuration
-      const configResponse = await fetch("api/get-websocket-config.php");
+      // Get AJAX configuration
+      const configResponse = await fetch("api/get-ajax-config.php");
       const config = await configResponse.json();
 
       if (!config.enabled) {
-        throw new Error("WebSocket service is disabled");
+        throw new Error("AJAX polling service is disabled");
       }
 
-      // Initialize WebSocket with secure configuration
-      this.wsManager = new WebSocketManager({
-        protocol: window.location.protocol === "https:" ? "wss:" : "ws:",
-        host: config.host || window.location.hostname,
-        port: config.port || "5500",
-        path: "/ws",
-        reconnectAttempts: config.maxRetries || 5,
-        reconnectInterval: config.reconnectDelay || 3000,
-        pingInterval: config.pingInterval || 30000,
+      // Initialize AJAX polling with configuration
+      this.pollManager = {
+        interval: config.pollInterval || 5000,
+        maxRetries: config.maxRetries || 5,
+        retryDelay: config.retryDelay || 3000,
         debug: true,
-      });
+        active: true,
+        pollTimer: null
+      };
 
-      await this.setupWebSocketHandlers();
+      await this.startPolling();
       return true;
     } catch (error) {
-      console.error("WebSocket initialization error:", error);
+      console.error("Polling initialization error:", error);
       throw error;
     }
   }
 
-  async setupWebSocketHandlers() {
-    if (!this.wsManager) {
-      throw new Error("WebSocket manager not initialized");
+  async startPolling() {
+    if (!this.pollManager) {
+      throw new Error("Poll manager not initialized");
     }
 
-    // Connection events
-    this.wsManager.on("open", () => {
-      if (window.notifications) {
-        window.notifications.success("Connected to order system");
-      }
-      this.stopPolling();
-    });
-
-    this.wsManager.on("close", () => {
-      if (window.notifications) {
-        window.notifications.warning(
-          "Connection lost. Attempting to reconnect..."
-        );
-      }
-      // Start polling as backup
-      this.startPolling();
-    });
-
-    this.wsManager.on("error", (error) => {
-      console.error("WebSocket error:", error);
-      if (window.notifications) {
-        window.notifications.error("Connection error. Switching to polling.");
-      }
-      this.startPolling();
-    });
-
-    // Order events with validation and error handling
-    this.wsManager.on("orderPlaced", (data) => {
+    // Start polling
+    const poll = async () => {
       try {
-        if (!this.validateOrderData(data)) {
-          throw new Error("Invalid order data received");
-        }
-        this.handleNewOrder(data);
-        if (window.notifications) {
-          window.notifications.info("New order received!");
+        // Check for new orders
+        const response = await fetch("api/check-orders.php");
+        const data = await response.json();
+
+        if (data.success) {
+          if (data.hasNewOrders) {
+            await this.handleNewOrder(data.orders);
+            if (window.notifications) {
+              window.notifications.info("New order received!");
+            }
+          }
+        } else {
+          throw new Error(data.message || "Failed to check for new orders");
         }
       } catch (error) {
-        console.error("Error handling new order:", error);
+        console.error("Polling error:", error);
+        this.handlePollingError(error);
       }
+
+      // Schedule next poll if still active
+      if (this.pollManager.active) {
+        this.pollManager.pollTimer = setTimeout(poll, this.pollManager.interval);
+      }
+    };
+
+    // Start initial poll
+    poll();
     });
 
     this.wsManager.on("orderUpdated", (data) => {
